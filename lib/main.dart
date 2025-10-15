@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:workout_tracker/Providers/Excercise_provider.dart';
-import 'package:workout_tracker/Set_Up_Screen.dart';
+import 'package:workout_tracker/set_up_routein_days.dart';
 import 'package:workout_tracker/login_sign_up/welcome_screen.dart';
 
 void main() {
@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const SetUpScreen(), // you can change to SetUpScreen for testing
+      home: const WelcomeScreen(), // you can change to SetUpScreen for testing
     );
   }
 }

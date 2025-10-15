@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:workout_tracker/Set_Up_Screen.dart';
+import 'package:workout_tracker/set_up_routein_days.dart';
 
 import 'logIn_screen.dart';
 
@@ -210,7 +210,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               // Signup button
               ElevatedButton(
                 onPressed: (){
-                  Navigator.push(context, MaterialPageRoute(builder: (context)=>SetUpScreen()),);
+                  Navigator.push(context, MaterialPageRoute(builder: (context)=>SetUpRouteinDays()),);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF7165D6),

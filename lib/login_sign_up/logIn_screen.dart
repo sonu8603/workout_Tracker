@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:workout_tracker/home_Screen.dart';
+import 'package:workout_tracker/home_screen.dart';
 import 'package:workout_tracker/login_sign_up/signup_screen.dart';
 
 
