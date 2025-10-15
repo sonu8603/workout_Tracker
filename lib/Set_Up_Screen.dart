@@ -13,8 +13,17 @@ class SetUpScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Create Your Routine"),
+        title: Row(
+
+          children: [
+            Icon(Icons.menu),
+            SizedBox(width: 70,),
+            
+            const Text("Create Your Routine"),
+          ],
+        ),
         backgroundColor: Colors.deepPurple[300],
+        
       ),
       body: ListView.builder(
         itemCount: exerciseProvider.days.length,
