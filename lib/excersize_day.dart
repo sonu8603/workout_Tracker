@@ -146,7 +146,6 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
 
                               ],
                             ),
-                            // title: Text(exercises[index]),
                           ),
                         );
                       },
