@@ -59,7 +59,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
                 onSubmitted: (value) {
                   if (value.trim().isNotEmpty) {
                     Provider.of<ExerciseProvider>(context, listen: false)
-                        .addExerciseToDay(widget.day, value);
+                        .addExerciseToDay(widget.day, value,3);
                     _controller.clear();
                   }
                   else {
@@ -83,7 +83,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
                   final text = _controller.text.trim();
                   if (text.isNotEmpty) {
                     Provider.of<ExerciseProvider>(context, listen: false)
-                        .addExerciseToDay(widget.day, text);
+                        .addExerciseToDay(widget.day, text,3);
                     _controller.clear();
                   }
                   else{
@@ -108,7 +108,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
               Expanded(
                 child: Consumer<ExerciseProvider>(
                   builder: (context, provider, _) {
-                    final exercises = provider.getExercisesOfDay(widget.day);
+                    final exercises = provider.getExercisesForDay(widget.day);
 
                     if (exercises.isEmpty) {
                       return const Center(
@@ -142,7 +142,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
                             title: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(exercises[index]),
+                                Text(exercises[index].name),
 
                               ],
                             ),

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:workout_tracker/Providers/Excercise_provider.dart';
-import 'package:workout_tracker/excersize_day.dart';
 import 'package:workout_tracker/Navigation_Controll/navigation_controll.dart';
-import 'Extra_exercise/extra_exercise_ondate.dart';
+import 'package:workout_tracker/regular_exercises/regular_exercise_logic.dart';
+import 'package:workout_tracker/regular_exercises/regular_exercise_screen.dart';
+import 'Extra_exercise/extra_exercise_screen.dart';
+import 'Navigation_Controll/side_pannel_navigation.dart';
+import 'excersize_day_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final String? day;
@@ -16,7 +19,7 @@ class HomeScreen extends StatelessWidget {
     String todayName = day ?? exerciseProvider.today['name'];
     final todayDate = DateTime.now();
 
-    final regularExercises = exerciseProvider.getExercisesOfDay(todayName);
+    final regularExercises = exerciseProvider.getExercisesForDay(todayName);
     final extraExercisesDetailed = exerciseProvider.getExercisesForDate(todayDate);
 
     final hasExercises = regularExercises.isNotEmpty || extraExercisesDetailed.isNotEmpty;
@@ -24,45 +27,47 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text("Workout at $todayName"),
+        backgroundColor: Colors.deepPurple,
         leading: IconButton(
           icon: const Icon(Icons.menu),
-          onPressed: () => _showLeftPanel(context),
+          onPressed: () => showLeftPanel(context),
         ),
       ),
       body: !hasExercises
           ? Center(
-        child: Text(
-          exerciseProvider.isDayEnabled(todayName)
-              ? "No exercises added for $todayName"
-              : "$todayName is a rest day",
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              exerciseProvider.isDayEnabled(todayName)
+                  ? "No exercises added for $todayName"
+                  : "$todayName is a rest day",
+            ),
+             ElevatedButton(onPressed: (){
+               Navigator.push(context, MaterialPageRoute(builder: (context)=>AddExerciseScreen(day: todayName)));
+             }, child: Text("add exercise"))
+          ],
         ),
       )
           : ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Regular Day Exercises Section
+          // Regular Exercises Section
           if (regularExercises.isNotEmpty) ...[
             _buildSectionHeader("Regular Exercises", Icons.fitness_center),
             const SizedBox(height: 8),
-            ...regularExercises.asMap().entries.map((entry) {
-              return _buildExerciseCard(
-                entry.value,
-                entry.key + 1,
-                Colors.deepPurple,
-              );
+            ...regularExercises.map((exercise) {
+              return _buildExerciseCard(context, exercise, todayName, isRegular: true);
             }).toList(),
             const SizedBox(height: 16),
           ],
 
-          // Extra Exercises Section (with full details)
+          // Extra Exercises Section
           if (extraExercisesDetailed.isNotEmpty) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildSectionHeader(
-                  "Today's Extra Exercises",
-                  Icons.add_circle_outline,
-                ),
+                _buildSectionHeader("Today's Extra Exercises", Icons.add_circle_outline),
                 TextButton(
                   onPressed: () => _navigateToExtraExercises(context, todayDate),
                   child: const Text("Edit"),
@@ -71,7 +76,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             ...extraExercisesDetailed.map((exercise) {
-              return _buildDetailedExerciseCard(context, exercise, todayDate);
+              return _buildExerciseCard(context, exercise, todayDate.toString());
             }).toList(),
           ],
         ],
@@ -86,17 +91,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // Navigate to Extra Exercise Screen
-  void _navigateToExtraExercises(BuildContext context, DateTime date) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ExtraExerciseScreen(date: date),
-      ),
-    );
-  }
-
-  // Build section header
+  // Section Header
   Widget _buildSectionHeader(String title, IconData icon) {
     return Row(
       children: [
@@ -114,49 +109,29 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // Build simple exercise card (for regular exercises)
-  Widget _buildExerciseCard(
-      String exercise,
-      int number,
-      Color color,
-      ) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color,
-          child: Text(
-            "$number",
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
-        title: Text(exercise),
-      ),
-    );
-  }
-
-  // Build detailed exercise card with all sets (for extra exercises)
-  Widget _buildDetailedExerciseCard(BuildContext context, Exercise exercise, DateTime date) {
-    int completedSets = exercise.sets.where((s) => s.weight.isNotEmpty && s.reps.isNotEmpty).length;
+  // Exercise Card (used for both regular and extra)
+  Widget _buildExerciseCard(BuildContext context, Exercise exercise, String keyId,
+      {bool isRegular = false}) {
+    int completedSets =
+        exercise.sets.where((s) => s.weight.isNotEmpty && s.reps.isNotEmpty).length;
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 12),
       elevation: 3,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.orange.withOpacity(0.5), width: 2),
+        side: BorderSide(
+          color: isRegular ? Colors.deepPurple.withOpacity(0.4) : Colors.orange.withOpacity(0.4),
+          width: 2,
+        ),
       ),
       child: Column(
         children: [
-          // Exercise Header
+          // Header
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.15),
+              color: (isRegular ? Colors.deepPurple : Colors.orange).withOpacity(0.15),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(14),
                 topRight: Radius.circular(14),
@@ -164,7 +139,11 @@ class HomeScreen extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.fitness_center, color: Colors.orange, size: 26),
+                Icon(
+                  Icons.fitness_center,
+                  color: isRegular ? Colors.deepPurple : Colors.orange,
+                  size: 26,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -180,10 +159,7 @@ class HomeScreen extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         "$completedSets/${exercise.sets.length} sets completed",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[700],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                       ),
                     ],
                   ),
@@ -193,109 +169,93 @@ class HomeScreen extends StatelessWidget {
                       ? Icons.check_circle
                       : Icons.circle_outlined,
                   color: completedSets == exercise.sets.length ? Colors.green : Colors.grey,
-                  size: 30,
+                  size: 28,
                 ),
               ],
             ),
           ),
 
-          // Sets Table
+          // Sets List
           Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
-              children: [
-                // Table Header
-                Row(
-                  children: [
-                    const SizedBox(
-                      width: 50,
-                      child: Text(
-                        "Set",
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        "Weight",
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        "Reps",
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                    ),
-                    const SizedBox(width: 35),
-                  ],
-                ),
-                const Divider(height: 20, thickness: 1.5),
-
-                // Set Rows
-                ...exercise.sets.map((set) {
-                  bool isCompleted = set.weight.isNotEmpty && set.reps.isNotEmpty;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 50,
-                          child: CircleAvatar(
-                            radius: 18,
-                            backgroundColor: isCompleted ? Colors.green : Colors.grey[300],
-                            child: Text(
-                              "${set.setNumber}",
-                              style: TextStyle(
-                                color: isCompleted ? Colors.white : Colors.black87,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
+              children: exercise.sets.map((set) {
+                bool isCompleted = set.weight.isNotEmpty && set.reps.isNotEmpty;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 50,
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: isCompleted
+                              ? Colors.green
+                              : (isRegular ? Colors.deepPurple[100] : Colors.orange[100]),
                           child: Text(
-                            set.weight.isEmpty ? "-" : "${set.weight} kg",
+                            "${set.setNumber}",
                             style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: set.weight.isEmpty ? FontWeight.normal : FontWeight.w600,
-                              color: set.weight.isEmpty ? Colors.grey : Colors.black87,
+                              color: isCompleted ? Colors.white : Colors.black87,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                        Expanded(
-                          child: Text(
-                            set.reps.isEmpty ? "-" : "${set.reps} reps",
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: set.reps.isEmpty ? FontWeight.normal : FontWeight.w600,
-                              color: set.reps.isEmpty ? Colors.grey : Colors.black87,
-                            ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          set.weight.isEmpty ? "-" : "${set.weight} kg",
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight:
+                            set.weight.isEmpty ? FontWeight.normal : FontWeight.w600,
+                            color: set.weight.isEmpty ? Colors.grey : Colors.black87,
                           ),
                         ),
-                        SizedBox(
-                          width: 35,
-                          child: Icon(
-                            isCompleted ? Icons.check_circle : Icons.circle_outlined,
-                            color: isCompleted ? Colors.green : Colors.grey,
-                            size: 24,
+                      ),
+                      Expanded(
+                        child: Text(
+                          set.reps.isEmpty ? "-" : "${set.reps} reps",
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight:
+                            set.reps.isEmpty ? FontWeight.normal : FontWeight.w600,
+                            color: set.reps.isEmpty ? Colors.grey : Colors.black87,
                           ),
                         ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ],
+                      ),
+                      SizedBox(
+                        width: 35,
+                        child: Icon(
+                          isCompleted ? Icons.check_circle : Icons.circle_outlined,
+                          color: isCompleted ? Colors.green : Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
           ),
 
-          // Tap to edit hint
+          // Tap to Edit  for regular and extra exercise
           InkWell(
-            onTap: () => _navigateToExtraExercises(context, date),
+            onTap: () {
+              if (isRegular) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => RegularExerciseScreen(dayName: keyId),
+
+                  ),
+                );
+              } else {// yaha se extrascreen pe push ho raha hai
+                _navigateToExtraExercises(context, DateTime.parse(keyId));
+              }
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: (isRegular ? Colors.deepPurple : Colors.orange).withOpacity(0.1),
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(14),
                   bottomRight: Radius.circular(14),
@@ -304,13 +264,14 @@ class HomeScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.edit, size: 18, color: Colors.orange[800]),
+                  Icon(Icons.edit,
+                      size: 18, color: isRegular ? Colors.deepPurple : Colors.orange[800]),
                   const SizedBox(width: 8),
                   Text(
                     "Tap to edit sets",
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.orange[800],
+                      color: isRegular ? Colors.deepPurple : Colors.orange[800],
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -322,185 +283,70 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-}
 
-// Show dialog to add exercise with sets
-void _showAddExerciseDialog(BuildContext context, DateTime date) {
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController setsController = TextEditingController(text: "3");
+  // Add Extra Exercise Dialog
+  void _showAddExerciseDialog(BuildContext context, DateTime date) {
+    final TextEditingController nameController = TextEditingController();
+    final TextEditingController setsController = TextEditingController(text: "3");
 
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text("Add Extra Exercise"),
-        content: SingleChildScrollView(
-          child: Column(
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Add Extra Exercise"),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Date subtitle
-              Row(
-                children: [
-                  const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  Text(
-                    _formatDate(date),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Exercise Name
               TextField(
                 controller: nameController,
                 decoration: const InputDecoration(
                   labelText: "Exercise Name",
-                  hintText: "e.g., Bench Press",
                   border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.fitness_center),
                 ),
-                textCapitalization: TextCapitalization.words,
               ),
-              const SizedBox(height: 16),
-
-              // Number of Sets
+              const SizedBox(height: 10),
               TextField(
                 controller: setsController,
                 decoration: const InputDecoration(
                   labelText: "Number of Sets",
-                  hintText: "3",
                   border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.repeat),
                 ),
                 keyboardType: TextInputType.number,
               ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (nameController.text.trim().isNotEmpty && setsController.text.isNotEmpty) {
-                final exerciseProvider =
-                Provider.of<ExerciseProvider>(context, listen: false);
-
-                int numberOfSets = int.tryParse(setsController.text) ?? 3;
-                exerciseProvider.addExerciseForDate(date, nameController.text.trim(), numberOfSets);
-
-                Navigator.pop(context);
-
-                // Navigate to extra exercise screen to fill in sets
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ExtraExerciseScreen(date: date),
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
             ),
-            child: const Text("Add & Continue"),
-          ),
-        ],
-      );
-    },
-  );
-}
-
-// Format date helper
-String _formatDate(DateTime date) {
-  final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-  return "${days[date.weekday - 1]}, ${date.day} ${months[date.month - 1]} ${date.year}";
-}
-
-// Menu bar
-void _showLeftPanel(BuildContext context) {
-  showGeneralDialog(
-    context: context,
-    barrierLabel: "Menu",
-    barrierDismissible: true,
-    barrierColor: Colors.black54,
-    transitionDuration: const Duration(milliseconds: 300),
-    pageBuilder: (context, animation1, animation2) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: Material(
-          borderRadius: BorderRadius.circular(25),
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.6,
-            height: MediaQuery.of(context).size.height,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(25),
+            ElevatedButton(
+              onPressed: () {
+                if (nameController.text.trim().isNotEmpty) {
+                  final provider = Provider.of<ExerciseProvider>(context, listen: false);
+                  final numSets = int.tryParse(setsController.text) ?? 3;
+                  provider.addExerciseForDate(date, nameController.text.trim(), numSets);
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+              child: const Text("Add"),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 100),
-                ListTile(
-                  leading: const Icon(Icons.edit, color: Colors.deepPurple),
-                  title: const Text("Edit Exercise"),
-                  onTap: () {
-                    Navigator.pop(context);
-                    final exerciseProvider =
-                    Provider.of<ExerciseProvider>(context, listen: false);
-                    final todayName = exerciseProvider.today['name'];
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AddExerciseScreen(day: todayName),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.settings, color: Colors.deepPurple),
-                  title: const Text("Settings"),
-                  onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Settings clicked")),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.help_outline, color: Colors.deepPurple),
-                  title: const Text("Help"),
-                  onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Help clicked")),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    },
-    transitionBuilder: (context, animation, secondaryAnimation, child) {
-      return SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(-1, 0),
-          end: Offset.zero,
-        ).animate(animation),
-        child: child,
-      );
-    },
-  );
+          ],
+        );
+      },
+    );
+  }
+
+  // Navigate to Extra Exercise Screen
+  void _navigateToExtraExercises(BuildContext context, DateTime date) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ExtraExerciseScreen(date: date),
+      ),
+    );
+  }
+
+
 }

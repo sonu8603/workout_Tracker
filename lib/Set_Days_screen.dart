@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:workout_tracker/Providers/Excercise_provider.dart';
-import 'excersize_day.dart';
+import 'excersize_day_screen.dart';
 
 
 class SetDaysScreen extends StatelessWidget {

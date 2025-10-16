@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../Providers/Excercise_provider.dart';
-import '../excersize_day.dart';
+import '../excersize_day_screen.dart';
 
 void showLeftPanel(BuildContext context) {
   showGeneralDialog(
@@ -12,14 +12,17 @@ void showLeftPanel(BuildContext context) {
     barrierDismissible: true,
     barrierColor: Colors.black54,
     transitionDuration: const Duration(milliseconds: 300),
-    pageBuilder: (context, animation1, animation2) {
+    pageBuilder: (context, _, __) {
+      final provider = Provider.of<ExerciseProvider>(context, listen: false);
+      final todayName = provider.today['name'];
+
       return Align(
         alignment: Alignment.centerLeft,
         child: Material(
           borderRadius: BorderRadius.circular(25),
           child: Container(
             width: MediaQuery.of(context).size.width * 0.6,
-            height: MediaQuery.of(context).size.height,
+            height: double.infinity,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(25),
@@ -33,9 +36,6 @@ void showLeftPanel(BuildContext context) {
                   title: const Text("Edit Exercise"),
                   onTap: () {
                     Navigator.pop(context);
-                    final exerciseProvider =
-                    Provider.of<ExerciseProvider>(context, listen: false);
-                    final todayName = exerciseProvider.today['name'];
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -70,7 +70,7 @@ void showLeftPanel(BuildContext context) {
         ),
       );
     },
-    transitionBuilder: (context, animation, secondaryAnimation, child) {
+    transitionBuilder: (context, animation, _, child) {
       return SlideTransition(
         position: Tween<Offset>(
           begin: const Offset(-1, 0),

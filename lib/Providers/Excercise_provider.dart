@@ -56,13 +56,13 @@ class Exercise {
 
 class ExerciseProvider with ChangeNotifier {
   final List<Map<String, dynamic>> _days = [
-    {"name": "Monday", "short": "M", "enabled": true, "exercises": <String>[]},
-    {"name": "Tuesday", "short": "T", "enabled": true, "exercises": <String>[]},
-    {"name": "Wednesday", "short": "W", "enabled": true, "exercises": <String>[]},
-    {"name": "Thursday", "short": "Th", "enabled": true, "exercises": <String>[]},
-    {"name": "Friday", "short": "F", "enabled": true, "exercises": <String>[]},
-    {"name": "Saturday", "short": "Sa", "enabled": true, "exercises": <String>[]},
-    {"name": "Sunday", "short": "S", "enabled": true, "exercises": <String>[]},
+    {"name": "Monday", "short": "M", "enabled": true, "exercises": <Exercise>[]},
+    {"name": "Tuesday", "short": "T", "enabled": true, "exercises": <Exercise>[]},
+    {"name": "Wednesday", "short": "W", "enabled": true, "exercises": <Exercise>[]},
+    {"name": "Thursday", "short": "Th", "enabled": true, "exercises": <Exercise>[]},
+    {"name": "Friday", "short": "F", "enabled": true, "exercises": <Exercise>[]},
+    {"name": "Saturday", "short": "Sa", "enabled": true, "exercises": <Exercise>[]},
+    {"name": "Sunday", "short": "S", "enabled": true, "exercises": <Exercise>[]},
   ];
 
   final Map<DateTime, List<Exercise>> _extraExercises = {};
@@ -193,21 +193,75 @@ class ExerciseProvider with ChangeNotifier {
     }).toList();
   }
 
-  // ============ REGULAR DAY EXERCISES ============
 
-  void addExerciseToDay(String dayName, String exerciseName) {
+  // ============ REGULAR (WEEKLY) DAY EXERCISES ============
+
+  List<Exercise> getExercisesForDay(String dayName) {
+    final day = _days.firstWhere((d) => d['name'] == dayName);
+    return List<Exercise>.from(day['exercises'] as List<Exercise>);
+  }
+
+  void addExerciseToDay(String dayName, String exerciseName, int numberOfSets) {
     if (exerciseName.trim().isEmpty) return;
 
     final day = _days.firstWhere((d) => d['name'] == dayName);
-    final exercises = day['exercises'] as List<String>;
-    exercises.add(exerciseName.trim());
+    final exercises = day['exercises'] as List<Exercise>;
+
+    List<ExerciseSet> sets = [];
+    for (int i = 1; i <= numberOfSets; i++) {
+      sets.add(ExerciseSet(setNumber: i));
+    }
+
+    exercises.add(Exercise(name: exerciseName.trim(), sets: sets));
     notifyListeners();
   }
 
-  List<String> getExercisesOfDay(String dayName) {
+  void removeDayExercise(String dayName, int index) {
     final day = _days.firstWhere((d) => d['name'] == dayName);
-    return List<String>.from(day['exercises'] as List<String>);
+    final exercises = day['exercises'] as List<Exercise>;
+    if (index >= 0 && index < exercises.length) {
+      exercises.removeAt(index);
+      notifyListeners();
+    }
   }
+
+  void addSetToDayExercise(String dayName, int exerciseIndex) {
+    final day = _days.firstWhere((d) => d['name'] == dayName);
+    final exercises = day['exercises'] as List<Exercise>;
+    if (exerciseIndex >= 0 && exerciseIndex < exercises.length) {
+      final exercise = exercises[exerciseIndex];
+      int newSetNumber = exercise.sets.length + 1;
+      exercise.sets.add(ExerciseSet(setNumber: newSetNumber));
+      notifyListeners();
+    }
+  }
+
+  void removeSetFromDayExercise(String dayName, int exerciseIndex) {
+    final day = _days.firstWhere((d) => d['name'] == dayName);
+    final exercises = day['exercises'] as List<Exercise>;
+    if (exerciseIndex >= 0 && exerciseIndex < exercises.length) {
+      final exercise = exercises[exerciseIndex];
+      if (exercise.sets.isNotEmpty) {
+        exercise.sets.removeLast();
+        notifyListeners();
+      }
+    }
+  }
+
+  void updateDayExerciseSet(
+      String dayName, int exerciseIndex, int setIndex, String weight, String reps) {
+    final day = _days.firstWhere((d) => d['name'] == dayName);
+    final exercises = day['exercises'] as List<Exercise>;
+    if (exerciseIndex >= 0 && exerciseIndex < exercises.length) {
+      final exercise = exercises[exerciseIndex];
+      if (setIndex >= 0 && setIndex < exercise.sets.length) {
+        exercise.sets[setIndex].weight = weight;
+        exercise.sets[setIndex].reps = reps;
+        notifyListeners();
+      }
+    }
+  }
+
 
   bool isDayEnabled(String dayName) {
     try {
