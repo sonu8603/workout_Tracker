@@ -39,7 +39,7 @@ class WelcomeScreen extends StatelessWidget {
 
               Padding(
                 padding: const EdgeInsets.all(10),
-                child: Image.asset("assets/images/welcomeimage.jpg"),
+                child: Image.asset("assets/images/welcomescreen.png"),
               ),
               SizedBox(height:50),
               Text("Welcome To GYM",

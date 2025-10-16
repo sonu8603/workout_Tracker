@@ -43,9 +43,17 @@ class HomeScreen extends StatelessWidget {
                   ? "No exercises added for $todayName"
                   : "$todayName is a rest day",
             ),
-             ElevatedButton(onPressed: (){
-               Navigator.push(context, MaterialPageRoute(builder: (context)=>AddExerciseScreen(day: todayName)));
-             }, child: Text("add exercise"))
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AddExerciseScreen(day: todayName),
+                  ),
+                );
+              },
+              child: const Text("add exercise"),
+            )
           ],
         ),
       )
@@ -54,10 +62,35 @@ class HomeScreen extends StatelessWidget {
         children: [
           // Regular Exercises Section
           if (regularExercises.isNotEmpty) ...[
-            _buildSectionHeader("Regular Exercises", Icons.fitness_center),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildSectionHeader("Regular Exercises", Icons.fitness_center),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => RegularExerciseScreen(
+                          dayName: todayName,
+                          exerciseIndex: null, // Show all exercises
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text("View All"),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
-            ...regularExercises.map((exercise) {
-              return _buildExerciseCard(context, exercise, todayName, isRegular: true);
+            ...regularExercises.asMap().entries.map((entry) {
+              return _buildExerciseCard(
+                context,
+                entry.value,
+                todayName,
+                entry.key,
+                isRegular: true,
+              );
             }).toList(),
             const SizedBox(height: 16),
           ],
@@ -69,24 +102,41 @@ class HomeScreen extends StatelessWidget {
               children: [
                 _buildSectionHeader("Today's Extra Exercises", Icons.add_circle_outline),
                 TextButton(
-                  onPressed: () => _navigateToExtraExercises(context, todayDate),
-                  child: const Text("Edit"),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ExtraExerciseScreen(
+                          date: todayDate,
+                          exerciseIndex: null, // Show all exercises
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text("View All"),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            ...extraExercisesDetailed.map((exercise) {
-              return _buildExerciseCard(context, exercise, todayDate.toString());
+            ...extraExercisesDetailed.asMap().entries.map((entry) {
+              return _buildExerciseCard(
+                context,
+                entry.value,
+                todayDate.toString(),
+                entry.key,
+              );
             }).toList(),
           ],
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: regularExercises.isNotEmpty
+          ? FloatingActionButton(
         onPressed: () => _showAddExerciseDialog(context, todayDate),
         backgroundColor: Colors.orange,
         tooltip: "Add Extra Exercise",
         child: const Icon(Icons.add),
-      ),
+      )
+          : null,
       bottomNavigationBar: const CustomBottomNavBar(),
     );
   }
@@ -110,8 +160,13 @@ class HomeScreen extends StatelessWidget {
   }
 
   // Exercise Card (used for both regular and extra)
-  Widget _buildExerciseCard(BuildContext context, Exercise exercise, String keyId,
-      {bool isRegular = false}) {
+  Widget _buildExerciseCard(
+      BuildContext context,
+      Exercise exercise,
+      String keyId,
+      int exerciseIndex,
+      {bool isRegular = false}
+      ) {
     int completedSets =
         exercise.sets.where((s) => s.weight.isNotEmpty && s.reps.isNotEmpty).length;
 
@@ -237,19 +292,31 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
 
-          // Tap to Edit  for regular and extra exercise
+          // Tap to Edit - Opens ONLY this exercise
           InkWell(
             onTap: () {
               if (isRegular) {
+                // Navigate with specific exercise index
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => RegularExerciseScreen(dayName: keyId),
-
+                    builder: (context) => RegularExerciseScreen(
+                      dayName: keyId,
+                      exerciseIndex: exerciseIndex, // Pass index to show only this exercise
+                    ),
                   ),
                 );
-              } else {// yaha se extrascreen pe push ho raha hai
-                _navigateToExtraExercises(context, DateTime.parse(keyId));
+              } else {
+                // Navigate with specific exercise index
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ExtraExerciseScreen(
+                      date: DateTime.parse(keyId),
+                      exerciseIndex: exerciseIndex, // Pass index to show only this exercise
+                    ),
+                  ),
+                );
               }
             },
             child: Container(
@@ -337,16 +404,4 @@ class HomeScreen extends StatelessWidget {
       },
     );
   }
-
-  // Navigate to Extra Exercise Screen
-  void _navigateToExtraExercises(BuildContext context, DateTime date) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ExtraExerciseScreen(date: date),
-      ),
-    );
-  }
-
-
 }

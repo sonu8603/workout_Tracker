@@ -169,7 +169,7 @@ class _RegularSetRowState extends State<RegularSetRow> {
                     ),
                     const SizedBox(height: 2),
                     const Text(
-                        "kg", style: TextStyle(fontSize: 13, color: Colors.grey)),
+                        "kg", style: TextStyle(fontSize: 13, color: Colors.grey,fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),
@@ -191,7 +191,7 @@ class _RegularSetRowState extends State<RegularSetRow> {
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 2),
 
                       // Reps Input
                       Expanded(
@@ -226,8 +226,11 @@ class _RegularSetRowState extends State<RegularSetRow> {
                     ],
                   ),
                   const SizedBox(height: 2),
-                  const Text(
-                      "reps", style: TextStyle(fontSize: 10, color: Colors.grey)),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 10),
+                    child: const Text(
+                        "reps",  style: TextStyle(fontSize: 13, color: Colors.grey,fontWeight: FontWeight.w700)),
+                  ),
                 ],
               ),
             ),

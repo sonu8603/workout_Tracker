@@ -6,20 +6,39 @@ import 'extra_exercise_logic.dart';
 
 class ExtraExerciseScreen extends StatelessWidget {
   final DateTime date;
+  final int? exerciseIndex; // If provided, show only that exercise
 
-  const ExtraExerciseScreen({super.key, required this.date});
+  const ExtraExerciseScreen({
+    super.key,
+    required this.date,
+    this.exerciseIndex, // Optional parameter
+  });
 
   @override
   Widget build(BuildContext context) {
     final exerciseProvider = Provider.of<ExerciseProvider>(context);
-    final exercises = exerciseProvider.getExercisesForDate(date);
+    final allExercises = exerciseProvider.getExercisesForDate(date);
+
+    // Filter exercises: show only one if exerciseIndex is provided
+    final List<Exercise> exercisesToShow;
+    if (exerciseIndex != null && exerciseIndex! < allExercises.length) {
+      // Show ONLY the selected exercise
+      exercisesToShow = [allExercises[exerciseIndex!]];
+    } else {
+      // Show all exercises
+      exercisesToShow = allExercises;
+    }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Extra Exercises screen"),
+        title: Text(
+          exerciseIndex != null && exercisesToShow.isNotEmpty
+              ? exercisesToShow[0].name // Show exercise name when viewing single
+              : "Extra Exercises",
+        ),
         backgroundColor: Colors.orange,
       ),
-      body: exercises.isEmpty
+      body: exercisesToShow.isEmpty
           ? Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -40,13 +59,15 @@ class ExtraExerciseScreen extends StatelessWidget {
       )
           : ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: exercises.length,
+        itemCount: exercisesToShow.length,
         itemBuilder: (context, index) {
+          // Use the actual index from the full list
+          final actualIndex = exerciseIndex ?? index;
           return _ExerciseCard(
-            exercise: exercises[index],
-            exerciseIndex: index,
+            exercise: exercisesToShow[index],
+            exerciseIndex: actualIndex,
             date: date,
-            onDelete: () => _deleteExercise(context, index),
+            onDelete: () => _deleteExercise(context, actualIndex),
           );
         },
       ),
@@ -82,8 +103,29 @@ class ExtraExerciseScreen extends StatelessWidget {
   }
 
   String _formatDate(DateTime date) {
-    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     return "${days[date.weekday - 1]}, ${date.day} ${months[date.month - 1]} ${date.year}";
   }
 }

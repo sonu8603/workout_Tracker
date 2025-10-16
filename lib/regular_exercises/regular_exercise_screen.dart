@@ -3,25 +3,41 @@ import 'package:provider/provider.dart';
 import 'package:workout_tracker/Providers/Excercise_provider.dart';
 import 'package:workout_tracker/regular_exercises/regular_exercise_logic.dart';
 
-
-
-
 class RegularExerciseScreen extends StatelessWidget {
   final String dayName;
+  final int? exerciseIndex; // If provided, show only that exercise
 
-  const RegularExerciseScreen({super.key, required this.dayName});
+  const RegularExerciseScreen({
+    super.key,
+    required this.dayName,
+    this.exerciseIndex, // Optional parameter
+  });
 
   @override
   Widget build(BuildContext context) {
     final exerciseProvider = Provider.of<ExerciseProvider>(context);
-    final exercises = exerciseProvider.getExercisesForDay(dayName);
+    final allExercises = exerciseProvider.getExercisesForDay(dayName);
+
+    // Filter exercises: show only one if exerciseIndex is provided
+    final List<Exercise> exercisesToShow;
+    if (exerciseIndex != null && exerciseIndex! < allExercises.length) {
+      // Show ONLY the selected exercise
+      exercisesToShow = [allExercises[exerciseIndex!]];
+    } else {
+      // Show all exercises
+      exercisesToShow = allExercises;
+    }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("$dayName Exercises"),
+        title: Text(
+          exerciseIndex != null && exercisesToShow.isNotEmpty
+              ? exercisesToShow[0].name // Show exercise name when viewing single
+              : "$dayName Exercises",
+        ),
         backgroundColor: Colors.deepPurple,
       ),
-      body: exercises.isEmpty
+      body: exercisesToShow.isEmpty
           ? Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -42,21 +58,25 @@ class RegularExerciseScreen extends StatelessWidget {
       )
           : ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: exercises.length,
+        itemCount: exercisesToShow.length,
         itemBuilder: (context, index) {
+          // Use the actual index from the full list
+          final actualIndex = exerciseIndex ?? index;
           return _ExerciseCard(
-            exercise: exercises[index],
-            exerciseIndex: index,
+            exercise: exercisesToShow[index],
+            exerciseIndex: actualIndex,
             dayName: dayName,
-            onDelete: () => _deleteExercise(context, index),
+            onDelete: () => _deleteExercise(context, actualIndex),
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: exerciseIndex == null
+          ? FloatingActionButton(
         onPressed: () => _showAddExerciseDialog(context),
         backgroundColor: Colors.deepPurple,
         child: const Icon(Icons.add),
-      ),
+      )
+          : null, // Hide FAB when viewing single exercise
     );
   }
 
@@ -74,7 +94,6 @@ class RegularExerciseScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Day subtitle
                 Row(
                   children: [
                     const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
@@ -90,8 +109,6 @@ class RegularExerciseScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 20),
-
-                // Exercise Name
                 TextField(
                   controller: nameController,
                   decoration: const InputDecoration(
@@ -103,8 +120,6 @@ class RegularExerciseScreen extends StatelessWidget {
                   textCapitalization: TextCapitalization.words,
                 ),
                 const SizedBox(height: 16),
-
-                // Number of Sets
                 TextField(
                   controller: setsController,
                   decoration: const InputDecoration(
@@ -125,13 +140,13 @@ class RegularExerciseScreen extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () {
-                if (nameController.text.trim().isNotEmpty && setsController.text.isNotEmpty) {
+                if (nameController.text.trim().isNotEmpty &&
+                    setsController.text.isNotEmpty) {
                   final exerciseProvider =
                   Provider.of<ExerciseProvider>(context, listen: false);
-
                   int numberOfSets = int.tryParse(setsController.text) ?? 3;
-                  exerciseProvider.addExerciseToDay(dayName, nameController.text.trim(), numberOfSets);
-
+                  exerciseProvider.addExerciseToDay(
+                      dayName, nameController.text.trim(), numberOfSets);
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -196,7 +211,8 @@ class _ExerciseCard extends StatelessWidget {
   });
 
   void _addSet(BuildContext context) {
-    final exerciseProvider = Provider.of<ExerciseProvider>(context, listen: false);
+    final exerciseProvider =
+    Provider.of<ExerciseProvider>(context, listen: false);
     exerciseProvider.addSetToDayExercise(dayName, exerciseIndex);
   }
 
@@ -207,13 +223,16 @@ class _ExerciseCard extends StatelessWidget {
       );
       return;
     }
-    final exerciseProvider = Provider.of<ExerciseProvider>(context, listen: false);
+    final exerciseProvider =
+    Provider.of<ExerciseProvider>(context, listen: false);
     exerciseProvider.removeSetFromDayExercise(dayName, exerciseIndex);
   }
 
   @override
   Widget build(BuildContext context) {
-    int completedSets = exercise.sets.where((s) => s.weight.isNotEmpty && s.reps.isNotEmpty).length;
+    int completedSets = exercise.sets
+        .where((s) => s.weight.isNotEmpty && s.reps.isNotEmpty)
+        .length;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -279,17 +298,19 @@ class _ExerciseCard extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
                         side: const BorderSide(color: Colors.red),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
                     ),
                     const SizedBox(width: 12),
                     ElevatedButton.icon(
                       onPressed: () => _addSet(context),
                       icon: const Icon(Icons.add, size: 18),
-                      label: const Text("Add Set"),
+                      label: const Text("Add Set",style: TextStyle(fontWeight: FontWeight.bold,color: Colors.black45),),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        backgroundColor: Colors.deepPurple[300],
+                        padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
                     ),
                   ],
@@ -302,15 +323,20 @@ class _ExerciseCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
+
               children: [
                 // Header Row
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    const SizedBox(width: 60, child: Text("Set", style: TextStyle(fontWeight: FontWeight.bold))),
-                    const Expanded(child: Text("Weight (kg)", style: TextStyle(fontWeight: FontWeight.bold))),
+                    Text("Set",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text("Weight (kg)",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(width: 16),
-                    const Expanded(child: Text("Reps", style: TextStyle(fontWeight: FontWeight.bold))),
-                    const SizedBox(width: 40),
+                    Text("Reps",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    SizedBox(width: 10,),
                   ],
                 ),
                 const Divider(height: 24),

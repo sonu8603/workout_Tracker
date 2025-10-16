@@ -28,8 +28,16 @@ class _LogInScreenState extends State<LogInScreen> {
                   SizedBox(height:10),
                   Padding(
                     padding: const EdgeInsets.all(20),
-                    child: Image.asset("assets/images/welcomeimage.png"),
+                    child: Center(
+                      child: Image.asset(
+                        "assets/images/welcomescreen.png",
+                        width: MediaQuery.of(context).size.width * 0.8, // 60% of screen width
+                        fit: BoxFit.contain, // Keeps image proportions
+                      ),
+                    ),
                   ),
+                  SizedBox(height:10),
+
 
                   Padding(
                     padding: const EdgeInsets.all(15),

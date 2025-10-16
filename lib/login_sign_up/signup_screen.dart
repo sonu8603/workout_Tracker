@@ -19,7 +19,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
 
   void _signUp() {
     print("Create Account clicked"); // Debug check
@@ -28,9 +27,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     String email = _emailController.text.trim();
     String phone = _phoneController.text.trim();
     String password = _passwordController.text.trim();
-    String confirmPassword = _confirmPasswordController.text.trim();
 
-    if (name.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+    if (name.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text(" Please fill all fields")),
       );
@@ -51,12 +49,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
-    if (password != confirmPassword) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(" Passwords do not match")),
-      );
-      return;
-    }
 
     //  agar sab thik hua tab
     ScaffoldMessenger.of(context).showSnackBar(
@@ -80,20 +72,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              const SizedBox(height: 10),
               Padding(
-                padding: const EdgeInsets.all(20),
-                child: Image.asset("assets/images/welcomeimage.png"),
+                padding: const EdgeInsets.only(top: 0,bottom: 10),
+                child: Image.asset("assets/images/welcomescreen.png",
+                  width: MediaQuery.of(context).size.width * 0.8, // 60% of screen width
+                  fit: BoxFit.contain,),
               ),
 
               // Full Name
               Padding(
-                padding: const EdgeInsets.all(15),
+                padding: const EdgeInsets.only(top: 0,bottom :10,left: 15,right: 15),
                 child: TextField(
                   controller: _nameController,
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.person),
-                    label: const Text("Full Name"),
+                    label: const Text("username"),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(11),
                     ),
@@ -107,7 +100,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
               // Email
               Padding(
-                padding: const EdgeInsets.all(15),
+                padding: const EdgeInsets.only(left: 15,right: 15,top: 5,bottom: 10),
                 child: TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -127,7 +120,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
               // Phone number
               Padding(
-                padding: const EdgeInsets.all(15),
+                padding: const EdgeInsets.only(left: 15,right: 15,top: 5,bottom: 10),
                 child: TextField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
@@ -147,7 +140,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
               // Password
               Padding(
-                padding: const EdgeInsets.all(15),
+                padding: const EdgeInsets.only(left: 15,right: 15,top: 5,bottom: 10),
                 child: TextField(
                   controller: _passwordController,
                   obscureText: passToggle,
@@ -175,43 +168,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
               ),
 
-              // Confirm Password
-              Padding(
-                padding: const EdgeInsets.all(15),
-                child: TextField(
-                  controller: _confirmPasswordController,
-                  obscureText: confirmPassToggle,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.lock),
-                    label: const Text("Confirm Password"),
-                    suffixIcon: InkWell(
-                      onTap: () {
-                        setState(() {
-                          confirmPassToggle = !confirmPassToggle;
-                        });
-                      },
-                      child: confirmPassToggle
-                          ? const Icon(CupertinoIcons.eye_slash_fill)
-                          : const Icon(CupertinoIcons.eye_fill),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(11),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(11),
-                      borderSide: const BorderSide(color: Colors.orange),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
 
               // Signup button
               ElevatedButton(
-                onPressed: (){
-                  Navigator.push(context, MaterialPageRoute(builder: (context)=>SetUpRouteinDays()),);
-                },
+                onPressed: _signUp,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF7165D6),
                   padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
