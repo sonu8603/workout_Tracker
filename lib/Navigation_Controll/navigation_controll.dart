@@ -1,49 +1,85 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:workout_tracker/Providers/Excercise_provider.dart';
-import 'package:workout_tracker/excersize_day_screen.dart';
+import '../Graph_screen/graph_screen.dart';
+import '../History_file/history_screen.dart';
+import '../home_screen.dart';
 
+class NavigationRoutePage extends StatefulWidget {
+  const NavigationRoutePage({super.key});
 
-class CustomBottomNavBar extends StatelessWidget {
-  const CustomBottomNavBar({super.key});
+  @override
+  State<NavigationRoutePage> createState() => _NavigationRoutePageState();
+}
+
+class _NavigationRoutePageState extends State<NavigationRoutePage> {
+  int _selectedIndex = 0;
+
+  final _screens = const [
+    HomeScreen(),
+    GraphScreen(),
+    HistoryScreen(),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final exerciseProvider = Provider.of<ExerciseProvider>(context);
-
-    return BottomNavigationBar(
-      currentIndex: exerciseProvider.selectedIndex,
-      onTap: (index) {
-        exerciseProvider.setSelectedIndex(index);
-
-        // if (index == 0) {
-        //   final today = exerciseProvider.today;
-        //   if (today['enabled']) {
-        //     Navigator.push(
-        //       context,
-        //       MaterialPageRoute(
-        //         builder: (context) => AddExerciseScreen(day: today['name']),
-        //       ),
-        //     );
-        //   } else {
-        //     ScaffoldMessenger.of(context).showSnackBar(
-        //       SnackBar(content: Text("${today['name']} is a rest day")),
-        //     );
-        //   }
-          if (index == 1) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Graph clicked")),
-          );
-        } else if (index == 2) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("History clicked")),
-          );
+    return PopScope(
+      canPop: _selectedIndex == 0, // Allow exit only on the Home tab
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _selectedIndex != 0) {
+          setState(() {
+            _selectedIndex = 0; // Navigate to Home tab on back press
+          });
         }
       },
+      child: Scaffold(
+        backgroundColor: Colors.grey[300],
+        body: _screens[_selectedIndex],
+        bottomNavigationBar: CustomBottomNavBar(
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+        ),
+      ),
+    );
+  }
+}
+
+// Separate Bottom Navigation Bar Widget
+class CustomBottomNavBar extends StatelessWidget {
+  final int currentIndex;
+  final Function(int) onTap;
+
+  const CustomBottomNavBar({
+    super.key,
+    required this.currentIndex,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BottomNavigationBar(
+      currentIndex: currentIndex,
+      onTap: onTap,
+      selectedItemColor: Colors.deepPurple,
+      unselectedItemColor: Colors.grey,
+      type: BottomNavigationBarType.fixed,
       items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.today), label: "Today"),
-        BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: "Graph"),
-        BottomNavigationBarItem(icon: Icon(Icons.history), label: "History"),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home),
+          label: "Today",
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.show_chart),
+          label: "Graph",
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.history),
+          label: "History",
+        ),
       ],
     );
   }

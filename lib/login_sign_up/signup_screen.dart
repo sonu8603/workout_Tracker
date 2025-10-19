@@ -57,9 +57,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     // Navigate after short delay to show SnackBar
     Future.delayed(const Duration(milliseconds: 500), () {
-      Navigator.pushReplacement(
+      Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const LogInScreen()),
+        MaterialPageRoute(builder: (context) => const SetUpRouteinDays()),
+            (route) => false, // Remove LoginScreen from stack
       );
     });
   }
@@ -202,9 +203,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                   TextButton(
                     onPressed: () {
-                      Navigator.pushReplacement(
+                      Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => const LogInScreen()),
+
                       );
                     },
                     child: const Text(

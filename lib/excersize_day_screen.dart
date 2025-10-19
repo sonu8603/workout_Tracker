@@ -75,7 +75,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
                   }
                 },
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
 
               // Add button
               ElevatedButton(
@@ -99,7 +99,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey,
+                  backgroundColor: Colors.deepPurple[300],
                 ),
                 child: const Icon(Icons.add,size: 30,),
               ),
@@ -112,7 +112,8 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
 
                     if (exercises.isEmpty) {
                       return const Center(
-                        child: Text("No exercises added yet"),
+                        child: Text("No exercises added yet\n please enter exercise ",
+                        style: TextStyle(fontSize: 15,fontWeight: FontWeight.w400),),
                       );
                     }
 

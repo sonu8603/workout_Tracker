@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:workout_tracker/Providers/Excercise_provider.dart';
-import 'package:workout_tracker/Navigation_Controll/navigation_controll.dart';
-import 'package:workout_tracker/regular_exercises/regular_exercise_logic.dart';
 import 'package:workout_tracker/regular_exercises/regular_exercise_screen.dart';
 import 'Extra_exercise/extra_exercise_screen.dart';
 import 'Navigation_Controll/side_pannel_navigation.dart';
@@ -73,7 +71,7 @@ class HomeScreen extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (context) => RegularExerciseScreen(
                           dayName: todayName,
-                          exerciseIndex: null, // Show all exercises
+                          exerciseIndex: null,
                         ),
                       ),
                     );
@@ -84,11 +82,10 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             ...regularExercises.asMap().entries.map((entry) {
-              return _buildExerciseCard(
-                context,
-                entry.value,
-                todayName,
-                entry.key,
+              return _ExpandableExerciseCard(
+                exercise: entry.value,
+                keyId: todayName,
+                exerciseIndex: entry.key,
                 isRegular: true,
               );
             }).toList(),
@@ -108,7 +105,7 @@ class HomeScreen extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (context) => ExtraExerciseScreen(
                           date: todayDate,
-                          exerciseIndex: null, // Show all exercises
+                          exerciseIndex: null,
                         ),
                       ),
                     );
@@ -119,11 +116,11 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             ...extraExercisesDetailed.asMap().entries.map((entry) {
-              return _buildExerciseCard(
-                context,
-                entry.value,
-                todayDate.toString(),
-                entry.key,
+              return _ExpandableExerciseCard(
+                exercise: entry.value,
+                keyId: todayDate.toString(),
+                exerciseIndex: entry.key,
+                isRegular: false,
               );
             }).toList(),
           ],
@@ -137,11 +134,10 @@ class HomeScreen extends StatelessWidget {
         child: const Icon(Icons.add),
       )
           : null,
-      bottomNavigationBar: const CustomBottomNavBar(),
+      // REMOVED bottomNavigationBar - it's now in NavigationRoutePage
     );
   }
 
-  // Section Header
   Widget _buildSectionHeader(String title, IconData icon) {
     return Row(
       children: [
@@ -159,199 +155,6 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // Exercise Card (used for both regular and extra)
-  Widget _buildExerciseCard(
-      BuildContext context,
-      Exercise exercise,
-      String keyId,
-      int exerciseIndex,
-      {bool isRegular = false}
-      ) {
-    int completedSets =
-        exercise.sets.where((s) => s.weight.isNotEmpty && s.reps.isNotEmpty).length;
-
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 12),
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isRegular ? Colors.deepPurple.withOpacity(0.4) : Colors.orange.withOpacity(0.4),
-          width: 2,
-        ),
-      ),
-      child: Column(
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: (isRegular ? Colors.deepPurple : Colors.orange).withOpacity(0.15),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(14),
-                topRight: Radius.circular(14),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.fitness_center,
-                  color: isRegular ? Colors.deepPurple : Colors.orange,
-                  size: 26,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        exercise.name,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        "$completedSets/${exercise.sets.length} sets completed",
-                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  completedSets == exercise.sets.length
-                      ? Icons.check_circle
-                      : Icons.circle_outlined,
-                  color: completedSets == exercise.sets.length ? Colors.green : Colors.grey,
-                  size: 28,
-                ),
-              ],
-            ),
-          ),
-
-          // Sets List
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              children: exercise.sets.map((set) {
-                bool isCompleted = set.weight.isNotEmpty && set.reps.isNotEmpty;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 50,
-                        child: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: isCompleted
-                              ? Colors.green
-                              : (isRegular ? Colors.deepPurple[100] : Colors.orange[100]),
-                          child: Text(
-                            "${set.setNumber}",
-                            style: TextStyle(
-                              color: isCompleted ? Colors.white : Colors.black87,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          set.weight.isEmpty ? "-" : "${set.weight} kg",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight:
-                            set.weight.isEmpty ? FontWeight.normal : FontWeight.w600,
-                            color: set.weight.isEmpty ? Colors.grey : Colors.black87,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          set.reps.isEmpty ? "-" : "${set.reps} reps",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight:
-                            set.reps.isEmpty ? FontWeight.normal : FontWeight.w600,
-                            color: set.reps.isEmpty ? Colors.grey : Colors.black87,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 35,
-                        child: Icon(
-                          isCompleted ? Icons.check_circle : Icons.circle_outlined,
-                          color: isCompleted ? Colors.green : Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-
-          // Tap to Edit - Opens ONLY this exercise
-          InkWell(
-            onTap: () {
-              if (isRegular) {
-                // Navigate with specific exercise index
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => RegularExerciseScreen(
-                      dayName: keyId,
-                      exerciseIndex: exerciseIndex, // Pass index to show only this exercise
-                    ),
-                  ),
-                );
-              } else {
-                // Navigate with specific exercise index
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ExtraExerciseScreen(
-                      date: DateTime.parse(keyId),
-                      exerciseIndex: exerciseIndex, // Pass index to show only this exercise
-                    ),
-                  ),
-                );
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                color: (isRegular ? Colors.deepPurple : Colors.orange).withOpacity(0.1),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(14),
-                  bottomRight: Radius.circular(14),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.edit,
-                      size: 18, color: isRegular ? Colors.deepPurple : Colors.orange[800]),
-                  const SizedBox(width: 8),
-                  Text(
-                    "Tap to edit sets",
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isRegular ? Colors.deepPurple : Colors.orange[800],
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Add Extra Exercise Dialog
   void _showAddExerciseDialog(BuildContext context, DateTime date) {
     final TextEditingController nameController = TextEditingController();
     final TextEditingController setsController = TextEditingController(text: "3");
@@ -402,6 +205,237 @@ class HomeScreen extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+// Expandable Exercise Card Widget
+class _ExpandableExerciseCard extends StatefulWidget {
+  final Exercise exercise;
+  final String keyId;
+  final int exerciseIndex;
+  final bool isRegular;
+
+  const _ExpandableExerciseCard({
+    required this.exercise,
+    required this.keyId,
+    required this.exerciseIndex,
+    required this.isRegular,
+  });
+
+  @override
+  State<_ExpandableExerciseCard> createState() => _ExpandableExerciseCardState();
+}
+
+class _ExpandableExerciseCardState extends State<_ExpandableExerciseCard> {
+  bool _isExpanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    int completedSets = widget.exercise.sets
+        .where((s) => s.weight.isNotEmpty && s.reps.isNotEmpty)
+        .length;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: widget.isRegular
+              ? Colors.deepPurple.withOpacity(0.4)
+              : Colors.orange.withOpacity(0.4),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: (widget.isRegular ? Colors.deepPurple : Colors.orange)
+                  .withOpacity(0.15),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(14),
+                topRight: const Radius.circular(14),
+                bottomLeft: _isExpanded ? Radius.zero : const Radius.circular(14),
+                bottomRight: _isExpanded ? Radius.zero : const Radius.circular(14),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.fitness_center,
+                  color: widget.isRegular ? Colors.deepPurple : Colors.orange,
+                  size: 26,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.exercise.name,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        "$completedSets/${widget.exercise.sets.length} sets completed",
+                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    _isExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: widget.isRegular ? Colors.deepPurple : Colors.orange,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isExpanded = !_isExpanded;
+                    });
+                  },
+                  tooltip: _isExpanded ? "Collapse" : "Expand",
+                ),
+                Icon(
+                  completedSets == widget.exercise.sets.length
+                      ? Icons.check_circle
+                      : Icons.circle_outlined,
+                  color: completedSets == widget.exercise.sets.length
+                      ? Colors.green
+                      : Colors.grey,
+                  size: 28,
+                ),
+              ],
+            ),
+          ),
+          if (_isExpanded) ...[
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                children: widget.exercise.sets.map((set) {
+                  bool isCompleted = set.weight.isNotEmpty && set.reps.isNotEmpty;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 50,
+                          child: CircleAvatar(
+                            radius: 18,
+                            backgroundColor: isCompleted
+                                ? Colors.green
+                                : (widget.isRegular
+                                ? Colors.deepPurple[100]
+                                : Colors.orange[100]),
+                            child: Text(
+                              "${set.setNumber}",
+                              style: TextStyle(
+                                color: isCompleted ? Colors.white : Colors.black87,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            set.weight.isEmpty ? "-" : "${set.weight} kg",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight:
+                              set.weight.isEmpty ? FontWeight.normal : FontWeight.w600,
+                              color: set.weight.isEmpty ? Colors.grey : Colors.black87,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            set.reps.isEmpty ? "-" : "${set.reps} reps",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight:
+                              set.reps.isEmpty ? FontWeight.normal : FontWeight.w600,
+                              color: set.reps.isEmpty ? Colors.grey : Colors.black87,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 35,
+                          child: Icon(
+                            isCompleted ? Icons.check_circle : Icons.circle_outlined,
+                            color: isCompleted ? Colors.green : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            InkWell(
+              onTap: () {
+                if (widget.isRegular) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RegularExerciseScreen(
+                        dayName: widget.keyId,
+                        exerciseIndex: widget.exerciseIndex,
+                      ),
+                    ),
+                  );
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ExtraExerciseScreen(
+                        date: DateTime.parse(widget.keyId),
+                        exerciseIndex: widget.exerciseIndex,
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: (widget.isRegular ? Colors.deepPurple : Colors.orange)
+                      .withOpacity(0.1),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(14),
+                    bottomRight: Radius.circular(14),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.edit,
+                        size: 18,
+                        color: widget.isRegular
+                            ? Colors.deepPurple
+                            : Colors.orange[800]),
+                    const SizedBox(width: 8),
+                    Text(
+                      "Tap to edit sets",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: widget.isRegular
+                            ? Colors.deepPurple
+                            : Colors.orange[800],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
