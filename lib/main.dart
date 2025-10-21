@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:workout_tracker/Providers/Excercise_provider.dart';
-import 'package:workout_tracker/set_up_routein_days.dart';
 import 'package:workout_tracker/login_sign_up/welcome_screen.dart';
 
 void main() {

@@ -69,7 +69,7 @@ class HomeScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => RegularExerciseScreen(
+                        builder: (context) => RegularExerciseScreen(  // all exercise displayed here
                           dayName: todayName,
                           exerciseIndex: null,
                         ),

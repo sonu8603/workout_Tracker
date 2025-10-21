@@ -59,7 +59,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
                 onSubmitted: (value) {
                   if (value.trim().isNotEmpty) {
                     Provider.of<ExerciseProvider>(context, listen: false)
-                        .addExerciseToDay(widget.day, value,3);
+                        .addExerciseToDay(widget.day, value,3,DateTime.now());
                     _controller.clear();
                   }
                   else {
@@ -83,7 +83,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
                   final text = _controller.text.trim();
                   if (text.isNotEmpty) {
                     Provider.of<ExerciseProvider>(context, listen: false)
-                        .addExerciseToDay(widget.day, text,3);
+                        .addExerciseToDay(widget.day, text,3,DateTime.now());
                     _controller.clear();
                   }
                   else{
@@ -144,6 +144,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(exercises[index].name),
+
 
                               ],
                             ),

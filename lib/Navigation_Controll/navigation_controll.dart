@@ -70,7 +70,7 @@ class CustomBottomNavBar extends StatelessWidget {
       items: const [
         BottomNavigationBarItem(
           icon: Icon(Icons.home),
-          label: "Today",
+          label: "Home",
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.show_chart),

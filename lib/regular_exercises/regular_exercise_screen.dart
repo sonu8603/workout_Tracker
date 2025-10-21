@@ -146,7 +146,7 @@ class RegularExerciseScreen extends StatelessWidget {
                   Provider.of<ExerciseProvider>(context, listen: false);
                   int numberOfSets = int.tryParse(setsController.text) ?? 3;
                   exerciseProvider.addExerciseToDay(
-                      dayName, nameController.text.trim(), numberOfSets);
+                      dayName, nameController.text.trim(), numberOfSets,DateTime.now());
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -157,7 +157,7 @@ class RegularExerciseScreen extends StatelessWidget {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
+                backgroundColor: Colors.deepPurple[300],
               ),
               child: const Text("Add"),
             ),

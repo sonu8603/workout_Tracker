@@ -123,7 +123,9 @@ class _RegularSetRowState extends State<RegularSetRow> {
                     Row(
                       children: [
                         // Minus button
-                        Expanded(
+                        SizedBox(
+                          width: 32,
+
                           child: IconButton(
                             icon: const Icon(Icons.remove_circle_outline),
                             color: Colors.orange,
@@ -136,26 +138,31 @@ class _RegularSetRowState extends State<RegularSetRow> {
                         const SizedBox(width: 5),
 
                         // Weight Input
-                        Expanded(
-                          child: TextField(
-                            controller: weightController,
-                            keyboardType: TextInputType.number,
-                            textAlign: TextAlign.center,
-                            decoration: InputDecoration(
-                              hintText: "1",
-                              border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(7)),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 1, vertical: 8),
-                              isDense: true,
+
+                           Expanded(
+                             flex: 3,
+                            child: TextField(
+                              controller: weightController,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              decoration: InputDecoration(
+                                hintText: "0",
+                                border: OutlineInputBorder(
+
+                                    borderRadius: BorderRadius.circular(7)),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 0, vertical: 8),
+                                isDense: true,
+                              ),
+                              onChanged: (value) => _updateSet(),
                             ),
-                            onChanged: (value) => _updateSet(),
                           ),
-                        ),
+
                         const SizedBox(width: 4),
 
                         // Plus button
-                        Expanded(
+                        SizedBox(
+                          width: 32,
                           child: IconButton(
                             icon: const Icon(Icons.add_circle_outline,),
                             color: Colors.orange,
