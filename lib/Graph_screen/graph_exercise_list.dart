@@ -2,30 +2,58 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../Providers/Excercise_provider.dart';
 
-class ExerciseListView extends StatelessWidget {
+class GraphExerciseListView extends StatelessWidget {
   final Function(String) onExerciseSelected;
 
-  const ExerciseListView({super.key, required this.onExerciseSelected});
+  const GraphExerciseListView({super.key, required this.onExerciseSelected});
 
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<ExerciseProvider>(context);
 
-    // Collect all unique exercise names across all dates
+    // ✅ Collect all unique exercise names from all dates (no 30-day limit)
     Set<String> allExercises = {};
 
-    final now = DateTime.now();
-    final startDate = now.subtract(const Duration(days: 30)); // last 30 days
-    for (int i = 0; i <= 30; i++) {
-      final date = startDate.add(Duration(days: i));
+    // 1️⃣ Add exercises from weekly planned days (_days)
+    for (var day in provider.days) {
+      final exercises = day['exercises'] as List<Exercise>;
+      for (var ex in exercises) {
+        allExercises.add(ex.name);
+      }
+    }
+
+    // 2️⃣ Add exercises from all extra recorded dates (_extraExercises)
+    final allDates = provider.getAllExtraExerciseDates();
+    for (var date in allDates) {
       final exercises = provider.getAllExercisesForDate(date);
       for (var ex in exercises) {
         allExercises.add(ex.name);
       }
     }
 
-    final exerciseList = allExercises.toList();
+    final exerciseList = allExercises.toList()..sort();
 
+    // ✅ If no exercises exist
+    if (exerciseList.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.fitness_center, size: 80, color: Colors.grey),
+              SizedBox(height: 20),
+              Text(
+                'No exercises found!',
+                style: TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // ✅ List of all unique exercises
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(8),

@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../Providers/Excercise_provider.dart';
 import 'graph_exercise_list.dart';
 
+
 class GraphScreen extends StatefulWidget {
   const GraphScreen({super.key});
 
@@ -18,10 +19,7 @@ class _GraphScreenState extends State<GraphScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = Provider.of<ExerciseProvider>(context, listen: false);
-      provider.generateDummyData(); // Optional: generate test data
-    });
+
   }
 
   @override
@@ -47,7 +45,7 @@ class _GraphScreenState extends State<GraphScreen> {
           ? _buildEmptyState()
           : Column(
         children: [
-          ExerciseListView(
+          GraphExerciseListView(
             onExerciseSelected: (exercise) {
               setState(() {
                 selectedExercise = exercise;

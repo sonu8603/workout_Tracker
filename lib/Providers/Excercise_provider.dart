@@ -295,6 +295,11 @@ class ExerciseProvider with ChangeNotifier {
     // Merge both
     return [...weeklyExercises, ...extra];
   }
+  // Return all extra exercise dates saved by user
+  List<DateTime> getAllExtraExerciseDates() {
+    return _extraExercises.keys.toList();
+  }
+
 
   bool isDayEnabled(String dayName) {
     try {
@@ -305,38 +310,38 @@ class ExerciseProvider with ChangeNotifier {
     }
   }
 
-
-// ================= DUMMY DATA FOR GRAPH TESTING =================
-
-  /// Generates dummy exercise data for multiple days
-  void generateDummyData() {
-    final today = DateTime.now();
-
-    // Example exercises
-    final exerciseNames = ["Push Ups", "Squats", "Bench Press"];
-
-    for (int i = 0; i < 12; i++) { // 12 days of data
-      final date = today.subtract(Duration(days: 12 - i));
-
-      for (var name in exerciseNames) {
-        // Create 3 sets per exercise with dummy weight and reps
-        final sets = List<ExerciseSet>.generate(3, (index) {
-          return ExerciseSet(
-            setNumber: index + 1,
-            weight: (5 + i + index).toString(), // increasing dummy weight
-            reps: (10 + i + index).toString(), // increasing dummy reps
-          );
-        });
-
-        // Add as extra exercise
-        addExerciseForDate(date, name, sets.length);
-
-        // Update the sets for the last added exercise
-        final exercises = getExercisesForDate(date);
-        exercises.last.sets = sets;
-      }
-    }
-
-    notifyListeners();
-  }
+//
+// // ================= DUMMY DATA FOR GRAPH TESTING =================
+//
+//   /// Generates dummy exercise data for multiple days
+//   void generateDummyData() {
+//     final today = DateTime.now();
+//
+//     // Example exercises
+//     final exerciseNames = ["Push Ups", "Squats", "Bench Press"];
+//
+//     for (int i = 0; i < 12; i++) { // 12 days of data
+//       final date = today.subtract(Duration(days: 12 - i));
+//
+//       for (var name in exerciseNames) {
+//         // Create 3 sets per exercise with dummy weight and reps
+//         final sets = List<ExerciseSet>.generate(3, (index) {
+//           return ExerciseSet(
+//             setNumber: index + 1,
+//             weight: (5 + i + index).toString(), // increasing dummy weight
+//             reps: (10 + i + index).toString(), // increasing dummy reps
+//           );
+//         });
+//
+//         // Add as extra exercise
+//         addExerciseForDate(date, name, sets.length);
+//
+//         // Update the sets for the last added exercise
+//         final exercises = getExercisesForDate(date);
+//         exercises.last.sets = sets;
+//       }
+//     }
+//
+//     notifyListeners();
+//   }
 }
