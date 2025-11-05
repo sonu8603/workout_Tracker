@@ -3,12 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:workout_tracker/models/individual_set.dart';
 import 'package:workout_tracker/models/individual_exercise_model.dart';
 
-
-
-
-
-
-
 class ExerciseProvider with ChangeNotifier {
   final List<Map<String, dynamic>> _days = [
     {

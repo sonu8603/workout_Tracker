@@ -20,9 +20,13 @@ class HomeScreen extends StatelessWidget {
     final todayDate = DateTime.now();
 
     final regularExercises = exerciseProvider.getExercisesForDay(todayName);
-    final extraExercisesDetailed = exerciseProvider.getExercisesForDate(todayDate);
+    final extraExercisesDetailed =
+    exerciseProvider.getExercisesForDate(todayDate);
 
-    final hasExercises = regularExercises.isNotEmpty || extraExercisesDetailed.isNotEmpty;
+    final hasExercises =
+        regularExercises.isNotEmpty || extraExercisesDetailed.isNotEmpty;
+
+    final isRestDay = !exerciseProvider.isDayEnabled(todayName);
 
     return Scaffold(
       appBar: AppBar(
@@ -33,27 +37,52 @@ class HomeScreen extends StatelessWidget {
           onPressed: () => showLeftPanel(context),
         ),
       ),
-      body: !hasExercises
+
+      // 💤 If today is rest day
+      body: isRestDay
           ? Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const Icon(Icons.hotel, size: 70, color: Colors.deepPurple),
+            const SizedBox(height: 20),
             Text(
-              exerciseProvider.isDayEnabled(todayName)
-                  ? "No exercises added for $todayName"
-                  : "$todayName is a rest day",
+              "$todayName is a Rest Day 💤",
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurple,
+              ),
             ),
+            const SizedBox(height: 10),
+            const Text(
+              "Take rest and recover your muscles!",
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          ],
+        ),
+      )
+
+      // 💪 If not rest day → show exercises normally
+          : !hasExercises
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text("No exercises added for $todayName"),
+            const SizedBox(height: 10),
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AddExerciseScreen(day: todayName),
+                    builder: (context) =>
+                        AddExerciseScreen(day: todayName),
                   ),
                 );
               },
-              child: const Text("add exercise"),
-            )
+              child: const Text("Add Exercise"),
+            ),
           ],
         ),
       )
@@ -65,13 +94,14 @@ class HomeScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildSectionHeader("Regular Exercises", Icons.fitness_center),
+                _buildSectionHeader(
+                    "Regular Exercises", Icons.fitness_center),
                 TextButton(
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => RegularExerciseScreen(  // all exercise displayed here
+                        builder: (context) => RegularExerciseScreen(
                           dayName: todayName,
                           exerciseIndex: null,
                         ),
@@ -99,7 +129,9 @@ class HomeScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildSectionHeader("Today's Extra Exercises", Icons.add_circle_outline),
+                _buildSectionHeader(
+                    "Today's Extra Exercises",
+                    Icons.add_circle_outline),
                 TextButton(
                   onPressed: () {
                     Navigator.push(
@@ -128,7 +160,10 @@ class HomeScreen extends StatelessWidget {
           ],
         ],
       ),
-      floatingActionButton: regularExercises.isNotEmpty
+
+      floatingActionButton: isRestDay
+          ? null // 💤 No button if rest day
+          : regularExercises.isNotEmpty
           ? FloatingActionButton(
         onPressed: () => showAddExerciseDialog(context, todayDate),
         backgroundColor: Colors.orange,
@@ -136,7 +171,6 @@ class HomeScreen extends StatelessWidget {
         child: const Icon(Icons.add),
       )
           : null,
-
     );
   }
 
@@ -156,6 +190,4 @@ class HomeScreen extends StatelessWidget {
       ],
     );
   }
-
-
 }
