@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../Providers/Excercise_provider.dart';
+import '../models/individual_exercise_model.dart';
 
 class GraphExerciseListView extends StatelessWidget {
   final Function(String) onExerciseSelected;

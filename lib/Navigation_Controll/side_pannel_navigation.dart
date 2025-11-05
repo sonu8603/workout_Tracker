@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:workout_tracker/set_up_routein_days.dart';
 
 import '../Providers/Excercise_provider.dart';
 import '../excersize_day_screen.dart';
@@ -44,11 +45,35 @@ void showLeftPanel(BuildContext context) {
                     );
                   },
                 ),
+
+                ListTile(
+                  leading: const Icon(Icons.edit, color: Colors.deepPurple),
+                  title: const Text("edit Routein"),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+
+                        builder: (context) => SetUpRouteinDays(),
+                      ),
+                    );
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("routein clicked")),
+                    );
+                  },
+                ),
+
+
+
+
                 ListTile(
                   leading: const Icon(Icons.settings, color: Colors.deepPurple),
                   title: const Text("Settings"),
                   onTap: () {
                     Navigator.pop(context);
+
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("Settings clicked")),
                     );

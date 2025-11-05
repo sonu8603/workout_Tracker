@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:workout_tracker/Providers/Excercise_provider.dart';
 
+import '../models/individual_exercise_model.dart';
 import 'extra_exercise_logic.dart';
 
 class ExtraExerciseScreen extends StatelessWidget {

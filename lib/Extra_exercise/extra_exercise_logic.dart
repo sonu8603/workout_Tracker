@@ -5,6 +5,7 @@
 import 'package:provider/provider.dart';
 
 import '../Providers/Excercise_provider.dart';
+import '../models/individual_set.dart';
 
 class SetRow extends StatefulWidget {
   final ExerciseSet set;

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../Providers/Excercise_provider.dart';
+import '../models/individual_set.dart';
 
 // Individual Set Row Widget
 class RegularSetRow extends StatefulWidget {

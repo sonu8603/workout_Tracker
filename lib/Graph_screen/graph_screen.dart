@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../Providers/Excercise_provider.dart';
+import '../models/individual_exercise_model.dart';
 import 'graph_exercise_list.dart';
 
 

@@ -57,12 +57,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     // Navigate after short delay to show SnackBar
     Future.delayed(const Duration(milliseconds: 500), () {
-      Navigator.pushAndRemoveUntil(
+      Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const SetUpRouteinDays()),
-            (route) => false, // Remove LoginScreen from stack
+        MaterialPageRoute(builder: (context) => const SetUpRouteinDays(fromSignup: true)),
       );
     });
+
   }
 
   @override

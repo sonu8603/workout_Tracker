@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:workout_tracker/Providers/Excercise_provider.dart';
 import 'package:workout_tracker/regular_exercises/regular_exercise_logic.dart';
 
+import '../models/individual_exercise_model.dart';
+
 class RegularExerciseScreen extends StatelessWidget {
   final String dayName;
   final int? exerciseIndex; // If provided, show only that exercise

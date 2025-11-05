@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../Providers/Excercise_provider.dart';
+import '../models/individual_exercise_model.dart';
 
 class HistoryExercisesScreen extends StatelessWidget {
   final DateTime date;

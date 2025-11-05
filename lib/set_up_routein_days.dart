@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:workout_tracker/Providers/Excercise_provider.dart';
-import 'package:workout_tracker/Set_Days_screen.dart';
 import 'package:workout_tracker/excersize_day_screen.dart';
 import 'package:workout_tracker/home_screen.dart';
 
 
 class SetUpRouteinDays extends StatelessWidget {
-  const SetUpRouteinDays({super.key});
+  final bool fromSignup;
+
+  const SetUpRouteinDays({super.key, this.fromSignup=false});
 
   @override
   Widget build(BuildContext context) {
@@ -87,27 +88,26 @@ class SetUpRouteinDays extends StatelessWidget {
             ),
           ),
 
-            Text("Go To HomeScreen"),
-
-
-
-           Padding(
-             padding: const EdgeInsets.only(bottom: 60,top: 20),
-             child: ElevatedButton(onPressed: (){
-               Navigator.push(context, MaterialPageRoute(builder: (context)=>HomeScreen()),);
-             },
-                 style: ElevatedButton.styleFrom(
-                   backgroundColor: Colors.grey,
-                 ),
-                 child:Icon(Icons.arrow_forward)),
-             
-           )
-            
-            
+          if (fromSignup) ...[
+            const Text("Go To HomeScreen"),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 60, top: 20),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HomeScreen()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey,
+                ),
+                child: const Icon(Icons.arrow_forward),
+              ),
+            ),
+          ],
         ],
       ),
-
-
     );
   }
 }
