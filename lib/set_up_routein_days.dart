@@ -4,6 +4,9 @@ import 'package:workout_tracker/Providers/Excercise_provider.dart';
 import 'package:workout_tracker/excersize_day_screen.dart';
 import 'package:workout_tracker/home_screen.dart';
 
+import 'Navigation_Controll/navigation_controll.dart';
+import 'Navigation_Controll/side_pannel_navigation.dart';
+
 
 class SetUpRouteinDays extends StatelessWidget {
   final bool fromSignup;
@@ -96,7 +99,7 @@ class SetUpRouteinDays extends StatelessWidget {
                 onPressed: () {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => const HomeScreen()),
+                    MaterialPageRoute(builder: (context) => const NavigationRoutePage()), // ✅ Change this
                   );
                 },
                 style: ElevatedButton.styleFrom(

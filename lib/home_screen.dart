@@ -38,7 +38,7 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
 
-      // 💤 If today is rest day
+      //  If today is rest day
       body: isRestDay
           ? Center(
         child: Column(
