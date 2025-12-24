@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../Providers/Excercise_provider.dart';
-import '../models/individual_exercise_model.dart';
 
 class GraphExerciseListView extends StatelessWidget {
   final Function(String) onExerciseSelected;
@@ -17,7 +16,7 @@ class GraphExerciseListView extends StatelessWidget {
 
     // 1️⃣ Add exercises from weekly planned days (_days)
     for (var day in provider.days) {
-      final exercises = day['exercises'] as List<Exercise>;
+      final exercises = day.exercises;
       for (var ex in exercises) {
         allExercises.add(ex.name);
       }

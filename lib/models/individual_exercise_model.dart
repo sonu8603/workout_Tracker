@@ -1,33 +1,31 @@
-
-
-
-// Model for Exercise
+import 'package:hive/hive.dart';
 import 'individual_set.dart';
 
-class Exercise {
+part 'individual_exercise_model.g.dart';
+
+@HiveType(typeId: 3)
+class Exercise extends HiveObject {
+
+  @HiveField(0)
+  String id;
+
+  @HiveField(1)
   String name;
+
+  @HiveField(2)
   List<ExerciseSet> sets;
-  DateTime date; // New field
+
+  @HiveField(3)
+  DateTime date;
+
+  @HiveField(4)
+  bool isExtra; // regular vs extra exercise
 
   Exercise({
+    required this.id,
     required this.name,
     required this.sets,
     required this.date,
+    this.isExtra = false,
   });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'name': name,
-      'sets': sets.map((s) => s.toMap()).toList(),
-      'date': date.toIso8601String(),
-    };
-  }
-
-  factory Exercise.fromMap(Map<String, dynamic> map) {
-    return Exercise(
-      name: map['name'],
-      sets: (map['sets'] as List).map((s) => ExerciseSet.fromMap(s)).toList(),
-      date: DateTime.parse(map['date']),
-    );
-  }
 }

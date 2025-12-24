@@ -60,7 +60,7 @@ class HistoryScreen extends StatelessWidget {
 
     // 1️⃣ Weekly planned exercises (from _days)
     for (var day in provider.days) {
-      final exercises = day['exercises'] as List<Exercise>;
+      final exercises = day.exercises;
       for (var exercise in exercises) {
         dates.add(DateTime(
           exercise.date.year,

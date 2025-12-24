@@ -140,24 +140,37 @@ class _RegularSetRowState extends State<RegularSetRow> {
 
                         // Weight Input
 
-                           Expanded(
-                             flex: 3,
-                            child: TextField(
-                              controller: weightController,
-                              keyboardType: TextInputType.number,
-                              textAlign: TextAlign.center,
-                              decoration: InputDecoration(
-                                hintText: "0",
-                                border: OutlineInputBorder(
-
-                                    borderRadius: BorderRadius.circular(7)),
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 0, vertical: 8),
-                                isDense: true,
+                        Expanded(
+                          flex: 3,
+                          child: TextField(
+                            controller: weightController,
+                            keyboardType: TextInputType.number,
+                            textAlign: TextAlign.center,
+                            decoration: InputDecoration(
+                              hintText: "0",
+                              hintStyle: TextStyle(color: Colors.grey[400]),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey[600]!),
                               ),
-                              onChanged: (value) => _updateSet(),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black38),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                    color: Colors.purple,
+                                    width: 2
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 0, vertical: 8),
+                              isDense: true,
                             ),
+                            onChanged: (value) => _updateSet(),
                           ),
+                        ),
 
                         const SizedBox(width: 4),
 
@@ -182,7 +195,7 @@ class _RegularSetRowState extends State<RegularSetRow> {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
 
             // Reps Section with +/- buttons
             Expanded(
@@ -203,6 +216,7 @@ class _RegularSetRowState extends State<RegularSetRow> {
 
                       // Reps Input
                       Expanded(
+                        flex: 3,
                         child: TextField(
                           controller: repsController,
                           keyboardType: TextInputType.number,
@@ -245,7 +259,7 @@ class _RegularSetRowState extends State<RegularSetRow> {
 
             // Check Icon
             SizedBox(
-              width: 40,
+              width: 20,
               child: isCompleted
                   ? const Icon(Icons.check_circle, color: Colors.green, size: 28)
                   : const Icon(

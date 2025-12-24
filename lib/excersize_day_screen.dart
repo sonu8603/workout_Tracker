@@ -113,7 +113,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
                     if (exercises.isEmpty) {
                       return const Center(
                         child: Text("No exercises added yet\n please enter exercise ",
-                        style: TextStyle(fontSize: 15,fontWeight: FontWeight.w400),),
+                          style: TextStyle(fontSize: 15,fontWeight: FontWeight.w400),),
                       );
                     }
 
@@ -135,20 +135,37 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
                             borderRadius: BorderRadius.circular(11),
                           ),
 
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: Colors.deepPurple[300],
-                              child: Text("${index + 1}"),
-                            ),
-                            title: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(exercises[index].name),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.deepPurple[300],
+                                child: Text(
+                                  "${index + 1}",
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              title: Text(
+                                exercises[index].name,
+                                style: const TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                              trailing: Wrap(
+                                spacing: 8,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, color: Colors.blueGrey),
+                                    onPressed: () {
 
-
-                              ],
-                            ),
-                          ),
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.redAccent),
+                                    onPressed: () {
+                                      // Add your delete logic here
+                                    },
+                                  ),
+                                ],
+                              ),
+                            )
                         );
                       },
                     );
@@ -162,6 +179,5 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
     );
   }
 }
-
 
 

@@ -3,61 +3,29 @@ import 'package:flutter/material.dart';
 import 'package:workout_tracker/models/individual_set.dart';
 import 'package:workout_tracker/models/individual_exercise_model.dart';
 
+import '../models/workout_day.dart';
+
 class ExerciseProvider with ChangeNotifier {
-  final List<Map<String, dynamic>> _days = [
-    {
-      "name": "Monday",
-      "short": "M",
-      "enabled": true,
-      "exercises": <Exercise>[]
-    },
-    {
-      "name": "Tuesday",
-      "short": "T",
-      "enabled": true,
-      "exercises": <Exercise>[]
-    },
-    {
-      "name": "Wednesday",
-      "short": "W",
-      "enabled": true,
-      "exercises": <Exercise>[]
-    },
-    {
-      "name": "Thursday",
-      "short": "Th",
-      "enabled": true,
-      "exercises": <Exercise>[]
-    },
-    {
-      "name": "Friday",
-      "short": "F",
-      "enabled": true,
-      "exercises": <Exercise>[]
-    },
-    {
-      "name": "Saturday",
-      "short": "Sa",
-      "enabled": true,
-      "exercises": <Exercise>[]
-    },
-    {
-      "name": "Sunday",
-      "short": "S",
-      "enabled": true,
-      "exercises": <Exercise>[]
-    },
+  final List<WorkoutDay> _days = [
+    WorkoutDay(name: "Monday", short: "M"),
+    WorkoutDay(name: "Tuesday", short: "T"),
+    WorkoutDay(name: "Wednesday", short: "W"),
+    WorkoutDay(name: "Thursday", short: "Th"),
+    WorkoutDay(name: "Friday", short: "F"),
+    WorkoutDay(name: "Saturday", short: "Sa"),
+    WorkoutDay(name: "Sunday", short: "S"),
   ];
+
 
   final Map<DateTime, List<Exercise>> _extraExercises = {};
   int _selectedIndex = 0;
 
-  List<Map<String, dynamic>> get days => _days;
+  List<WorkoutDay> get days => _days;
 
   int get selectedIndex => _selectedIndex;
 
   void toggleDay(int index, bool value) {
-    _days[index]['enabled'] = value;
+    _days[index].enabled = value;
     notifyListeners();
   }
 
@@ -66,7 +34,7 @@ class ExerciseProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Map<String, dynamic> get today {
+  WorkoutDay get today {
     final todayIndex = DateTime
         .now()
         .weekday - 1;
@@ -75,10 +43,8 @@ class ExerciseProvider with ChangeNotifier {
 
   // ================= EXTRA EXERCISES =================
 
-  void addExerciseForDate(DateTime date, String exerciseName,
-      int numberOfSets) {
-    if (exerciseName
-        .trim()
+  void addExerciseForDate(DateTime date, String exerciseName,int numberOfSets) {
+    if (exerciseName.trim()
         .isEmpty) return;
     final key = DateTime(date.year, date.month, date.day);
 
@@ -87,7 +53,7 @@ class ExerciseProvider with ChangeNotifier {
     final sets = List<ExerciseSet>.generate(
         numberOfSets, (i) => ExerciseSet(setNumber: i + 1));
     _extraExercises[key]!.add(
-        Exercise(name: exerciseName.trim(), sets: sets, date: key));
+        Exercise(name: exerciseName.trim(), sets: sets, date: key, id: DateTime.now().millisecondsSinceEpoch.toString()));
 
     notifyListeners();
   }
@@ -159,24 +125,24 @@ class ExerciseProvider with ChangeNotifier {
         .trim()
         .isEmpty) return;
 
-    final day = _days.firstWhere((d) => d['name'] == dayName);
-    final exercises = day['exercises'] as List<Exercise>;
+    final day = _days.firstWhere((d) => d.name == dayName);
+    final exercises = day.exercises;
 
     final sets = List<ExerciseSet>.generate(
         numberOfSets, (i) => ExerciseSet(setNumber: i + 1));
-    exercises.add(Exercise(name: exerciseName.trim(), sets: sets, date: date));
+    exercises.add(Exercise(name: exerciseName.trim(), sets: sets, date: date, id: DateTime.now().millisecondsSinceEpoch.toString()));
 
     notifyListeners();
   }
 
   List<Exercise> getExercisesForDay(String dayName) {
-    final day = _days.firstWhere((d) => d['name'] == dayName);
-    return List<Exercise>.from(day['exercises'] as List<Exercise>);
+    final day = _days.firstWhere((d) => d.name == dayName);
+    return List<Exercise>.from(day.exercises);
   }
 
   void removeDayExercise(String dayName, int index) {
-    final day = _days.firstWhere((d) => d['name'] == dayName);
-    final exercises = day['exercises'] as List<Exercise>;
+    final day = _days.firstWhere((d) => d.name == dayName);
+    final exercises = day.exercises;
     if (index >= 0 && index < exercises.length) {
       exercises.removeAt(index);
       notifyListeners();
@@ -184,8 +150,8 @@ class ExerciseProvider with ChangeNotifier {
   }
 
   void addSetToDayExercise(String dayName, int exerciseIndex) {
-    final day = _days.firstWhere((d) => d['name'] == dayName);
-    final exercises = day['exercises'] as List<Exercise>;
+    final day = _days.firstWhere((d) => d.name == dayName);
+    final exercises = day.exercises;
     if (exerciseIndex >= 0 && exerciseIndex < exercises.length) {
       exercises[exerciseIndex].sets.add(
           ExerciseSet(setNumber: exercises[exerciseIndex].sets.length + 1));
@@ -194,19 +160,21 @@ class ExerciseProvider with ChangeNotifier {
   }
 
   void removeSetFromDayExercise(String dayName, int exerciseIndex) {
-    final day = _days.firstWhere((d) => d['name'] == dayName);
-    final exercises = day['exercises'] as List<Exercise>;
+    final day = _days.firstWhere((d) => d.name == dayName);
+    final exercises = day.exercises;
     if (exerciseIndex >= 0 && exerciseIndex < exercises.length) {
-      if (exercises[exerciseIndex].sets.isNotEmpty) exercises[exerciseIndex]
+      if (exercises[exerciseIndex].sets.isNotEmpty) {
+        exercises[exerciseIndex]
           .sets.removeLast();
+      }
       notifyListeners();
     }
   }
 
   void updateDayExerciseSet(String dayName, int exerciseIndex, int setIndex,
       String weight, String reps) {
-    final day = _days.firstWhere((d) => d['name'] == dayName);
-    final exercises = day['exercises'] as List<Exercise>;
+    final day = _days.firstWhere((d) => d.name== dayName);
+    final exercises = day.exercises;
     if (exerciseIndex >= 0 && exerciseIndex < exercises.length) {
       if (setIndex >= 0 && setIndex < exercises[exerciseIndex].sets.length) {
         exercises[exerciseIndex].sets[setIndex].weight = weight;
@@ -227,7 +195,7 @@ class ExerciseProvider with ChangeNotifier {
     // Weekly exercises performed on this date
     final weeklyExercises = <Exercise>[];
     for (var day in _days) {
-      final exercises = (day['exercises'] as List<Exercise>);
+      final exercises = (day.exercises);
       for (var ex in exercises) {
         if (ex.date.year == date.year &&
             ex.date.month == date.month &&
@@ -248,45 +216,45 @@ class ExerciseProvider with ChangeNotifier {
 
   bool isDayEnabled(String dayName) {
     try {
-      final day = _days.firstWhere((d) => d['name'] == dayName);
-      return day['enabled'] as bool;
+      final day = _days.firstWhere((d) => d.name == dayName);
+      return day.enabled;
     } catch (e) {
       return false;
     }
   }
 
-//
-// // ================= DUMMY DATA FOR GRAPH TESTING =================
-//
-//   /// Generates dummy exercise data for multiple days
-//   void generateDummyData() {
-//     final today = DateTime.now();
-//
-//     // Example exercises
-//     final exerciseNames = ["Push Ups", "Squats", "Bench Press"];
-//
-//     for (int i = 0; i < 12; i++) { // 12 days of data
-//       final date = today.subtract(Duration(days: 12 - i));
-//
-//       for (var name in exerciseNames) {
-//         // Create 3 sets per exercise with dummy weight and reps
-//         final sets = List<ExerciseSet>.generate(3, (index) {
-//           return ExerciseSet(
-//             setNumber: index + 1,
-//             weight: (5 + i + index).toString(), // increasing dummy weight
-//             reps: (10 + i + index).toString(), // increasing dummy reps
-//           );
-//         });
-//
-//         // Add as extra exercise
-//         addExerciseForDate(date, name, sets.length);
-//
-//         // Update the sets for the last added exercise
-//         final exercises = getExercisesForDate(date);
-//         exercises.last.sets = sets;
-//       }
-//     }
-//
-//     notifyListeners();
-//   }
+
+ // ================= DUMMY DATA FOR GRAPH TESTING =================
+
+  /// Generates dummy exercise data for multiple days
+  void generateDummyData() {
+    final today = DateTime.now();
+
+    // Example exercises
+    final exerciseNames = ["Push Ups", "Squats", "Bench Press"];
+
+    for (int i = 0; i < 12; i++) { // 12 days of data
+      final date = today.subtract(Duration(days: 12 - i));
+
+      for (var name in exerciseNames) {
+        // Create 3 sets per exercise with dummy weight and reps
+        final sets = List<ExerciseSet>.generate(3, (index) {
+          return ExerciseSet(
+            setNumber: index + 1,
+            weight: (5 + i + index).toString(), // increasing dummy weight
+            reps: (10 + i + index).toString(), // increasing dummy reps
+          );
+        });
+
+        // Add as extra exercise
+        addExerciseForDate(date, name, sets.length);
+
+        // Update the sets for the last added exercise
+        final exercises = getExercisesForDate(date);
+        exercises.last.sets = sets;
+      }
+    }
+
+    notifyListeners();
+  }
 }

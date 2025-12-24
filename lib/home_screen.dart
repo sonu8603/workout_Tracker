@@ -16,7 +16,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final exerciseProvider = Provider.of<ExerciseProvider>(context);
 
-    String todayName = day ?? exerciseProvider.today['name'];
+    String todayName = day ?? exerciseProvider.today.name;
     final todayDate = DateTime.now();
 
     final regularExercises = exerciseProvider.getExercisesForDay(todayName);

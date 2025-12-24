@@ -290,7 +290,6 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
     );
   }
 
-  // ------------------- TEXTFIELD BUILDERS -------------------
 
   Widget _buildModernTextField({
     required TextEditingController controller,

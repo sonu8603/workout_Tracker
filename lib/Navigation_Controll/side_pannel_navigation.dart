@@ -5,6 +5,7 @@ import 'package:workout_tracker/set_up_routein_days.dart';
 
 import '../Providers/Excercise_provider.dart';
 import '../excersize_day_screen.dart';
+import '../login_sign_up/settingpage.dart';
 
 void showLeftPanel(BuildContext context) {
   showGeneralDialog(
@@ -15,7 +16,7 @@ void showLeftPanel(BuildContext context) {
     transitionDuration: const Duration(milliseconds: 300),
     pageBuilder: (context, _, __) {
       final provider = Provider.of<ExerciseProvider>(context, listen: false);
-      final todayName = provider.today['name'];
+      final todayName = provider.today.name;
 
       return Align(
         alignment: Alignment.centerLeft,
@@ -73,6 +74,13 @@ void showLeftPanel(BuildContext context) {
                   title: const Text("Settings"),
                   onTap: () {
                     Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+
+                        builder: (context) => SettingsPage(),
+                      ),
+                    );
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("Settings clicked")),

@@ -44,7 +44,7 @@ class SetUpRouteinDays extends StatelessWidget {
                     border: Border.all(
                         color: isToday ? Colors.deepPurple : Colors.grey, width: 1.5),
                     borderRadius: BorderRadius.circular(10),
-                    color: day['enabled'] ? Colors.white : Colors.grey[200],
+                    color: day.enabled ? Colors.white : Colors.grey[200],
                     boxShadow: [
                       BoxShadow(
                         color: Colors.grey.withOpacity(0.2),
@@ -56,32 +56,32 @@ class SetUpRouteinDays extends StatelessWidget {
                   ),
                   child: ListTile(
                     title: Text(
-                      day['name'],
+                      day.name,
                       style: TextStyle(
                           fontWeight: isToday ? FontWeight.bold : FontWeight.normal),
                     ),
                     subtitle:
-                    Text(day['enabled'] ? "Add Exercise" : "Rest Day"),
-                    leading: Text(day['short'],
+                    Text(day.enabled ? "Add Exercise" : "Rest Day"),
+                    leading: Text(day.short,
                         style: const TextStyle(fontWeight: FontWeight.bold)),
                     trailing: Switch(
-                      value: day['enabled'],
+                      value: day.enabled,
                       onChanged: (value) {
                         exerciseProvider.toggleDay(index, value);
                       },
                     ),
                     onTap: () {
-                      if (day['enabled']) {
+                      if (day.enabled) {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) =>
-                                AddExerciseScreen(day: day['name']),
+                                AddExerciseScreen(day: day.name),
                           ),
                         );
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("${day['name']} is a rest day")),
+                          SnackBar(content: Text("${day.name} is a rest day")),
                         );
                       }
                     },

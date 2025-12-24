@@ -30,7 +30,7 @@ class _GraphScreenState extends State<GraphScreen> {
     // Collect unique exercises
     final Set<String> allExercises = {};
     for (var day in provider.days) {
-      final exercises = (day['exercises'] as List<Exercise>);
+      final exercises = (day.exercises);
       for (var e in exercises) {
         allExercises.add(e.name);
       }
@@ -66,13 +66,26 @@ class _GraphScreenState extends State<GraphScreen> {
   }
 
   Widget _buildSetSelector(ExerciseProvider provider) {
-    // Find the maximum number of sets for this exercise
     int maxSets = 0;
+
+    //  Check regular weekly exercises (from _days)
     for (var day in provider.days) {
-      final exercises = (day['exercises'] as List<Exercise>);
+      final exercises = (day.exercises);
       final ex = exercises.where((e) => e.name == selectedExercise).toList();
       if (ex.isNotEmpty) {
         maxSets = ex.first.sets.length > maxSets ? ex.first.sets.length : maxSets;
+      }
+    }
+
+    //  Check extra exercises (from _extraExercises)
+    final allDates = provider.getAllExtraExerciseDates();
+    for (var date in allDates) {
+      final exercises = provider.getAllExercisesForDate(date);
+      final ex = exercises.where((e) => e.name == selectedExercise).toList();
+      if (ex.isNotEmpty) {
+        for (var exercise in ex) {
+          maxSets = exercise.sets.length > maxSets ? exercise.sets.length : maxSets;
+        }
       }
     }
 

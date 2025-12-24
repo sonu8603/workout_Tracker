@@ -12,7 +12,7 @@ class RegularExerciseScreen extends StatelessWidget {
   const RegularExerciseScreen({
     super.key,
     required this.dayName,
-    this.exerciseIndex, // Optional parameter
+    this.exerciseIndex,
   });
 
   @override
