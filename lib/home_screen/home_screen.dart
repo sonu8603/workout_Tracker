@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:workout_tracker/Providers/Excercise_provider.dart';
 import 'package:workout_tracker/regular_exercises/regular_exercise_screen.dart';
-import 'Cards/exercise_card.dart';
-import 'Cards/exercise_dialog_pop_up.dart';
-import 'Extra_exercise/extra_exercise_screen.dart';
-import 'Navigation_Controll/side_pannel_navigation.dart';
-import 'excersize_day_screen.dart';
+import '../Cards/exercise_card.dart';
+import '../Cards/exercise_dialog_pop_up.dart';
+import '../Extra_exercise/extra_exercise_screen.dart';
+import '../Navigation_Controll/side_pannel_navigation.dart';
+import 'addexcersize_day_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final String? day;
@@ -63,26 +63,45 @@ class HomeScreen extends StatelessWidget {
         ),
       )
 
-      // 💪 If not rest day → show exercises normally
+      //  If not rest day → show exercises normally
           : !hasExercises
           ? Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text("No exercises added for $todayName"),
+            Text("No exercises added for $todayName"
+              ,style: TextStyle(fontSize: 15,fontWeight: FontWeight.w500),
+
+            ),
             const SizedBox(height: 10),
-            ElevatedButton(
+            ElevatedButton.icon(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        AddExerciseScreen(day: todayName),
+                    builder: (context) => AddExerciseScreen(day: todayName),
                   ),
                 );
               },
-              child: const Text("Add Exercise"),
+              icon: const Icon(Icons.add_circle_outline),
+              label: const Text("Add Exercise"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+                elevation: 6,
+                shadowColor: Colors.deepPurpleAccent,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+              ),
             ),
+
           ],
         ),
       )

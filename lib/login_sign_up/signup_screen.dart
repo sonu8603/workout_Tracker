@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:workout_tracker/login_sign_up/logIn_screen.dart';
-import '../set_up_routein_days.dart';
+import '../home_screen/set_up_routein_days.dart';
+import '../services/api_service.dart'; // ✅ FIXED: Removed 's' from services
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -15,7 +16,7 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
   bool passToggle = true;
   bool _isLoading = false;
 
-  final _formKey = GlobalKey<FormState>(); // 🔹 Form key for validation
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -47,43 +48,72 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
     super.dispose();
   }
 
-  // 🔹 SIGNUP FUNCTION WITH VALIDATION
   void _signUp() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 2));
+    // Call register API
+    final result = await ApiService.register(
+      username: _nameController.text.trim(),
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+      phone: _phoneController.text.trim(),
+    );
+
+
 
     if (!mounted) return;
 
     setState(() => _isLoading = false);
 
+    if (result['success']) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 12),
+              Text(result['message'] ?? 'Account created successfully!'),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(milliseconds: 800),
+        ),
+      );
+
+      await Future.delayed(const Duration(milliseconds: 900));
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SetUpRouteinDays(fromSignup: true),
+        ),
+      );
+    } else {
+      _showError(result['message']);
+    }
+
+
+  }
+
+  void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
+        content: Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 12),
-            Text("Account created successfully!"),
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message)),
           ],
         ),
-        backgroundColor: Colors.green,
+        backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(milliseconds: 800),
-      ),
-    );
-
-    await Future.delayed(const Duration(milliseconds: 900));
-
-    if (!mounted) return;
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const SetUpRouteinDays(fromSignup: true),
       ),
     );
   }
@@ -99,14 +129,12 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
             physics: const BouncingScrollPhysics(),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Form( // 🔹 Added Form for validation
+              child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 20),
-
-                    // Logo
                     Center(
                       child: Container(
                         height: 100,
@@ -134,7 +162,6 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 20),
                     const Text(
                       "Create Account",
@@ -155,8 +182,6 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
                       ),
                     ),
                     const SizedBox(height: 30),
-
-                    // Input Fields
                     _buildModernTextField(
                       controller: _nameController,
                       label: "Full Name",
@@ -166,11 +191,13 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
                         if (value == null || value.trim().isEmpty) {
                           return "Please enter your full name";
                         }
+                        if (value.trim().length < 3) {
+                          return "Name must be at least 3 characters";
+                        }
                         return null;
                       },
                     ),
                     const SizedBox(height: 10),
-
                     _buildModernTextField(
                       controller: _emailController,
                       label: "Email",
@@ -190,11 +217,10 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
                       },
                     ),
                     const SizedBox(height: 10),
-
                     _buildModernTextField(
                       controller: _phoneController,
                       label: "Phone Number",
-                      hint: "+91 XXXXX XXXXX",
+                      hint: "Enter 10-digit number",
                       icon: Icons.phone_outlined,
                       keyboardType: TextInputType.phone,
                       validator: (value) {
@@ -209,14 +235,10 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
                       },
                     ),
                     const SizedBox(height: 10),
-
                     _buildPasswordField(),
-
                     const SizedBox(height: 32),
                     _buildModernButton(),
                     const SizedBox(height: 20),
-
-                    // Divider
                     Row(
                       children: [
                         Expanded(child: Divider(color: Colors.grey.shade300)),
@@ -234,8 +256,6 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
                       ],
                     ),
                     const SizedBox(height: 24),
-
-                    // Social Login
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -246,10 +266,7 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
                         _buildSocialButton(Icons.facebook, Colors.blue),
                       ],
                     ),
-
                     const SizedBox(height: 24),
-
-                    // Login Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -289,7 +306,6 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
       ),
     );
   }
-
 
   Widget _buildModernTextField({
     required TextEditingController controller,

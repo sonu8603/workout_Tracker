@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:workout_tracker/Providers/Excercise_provider.dart';
-import 'package:workout_tracker/excersize_day_screen.dart';
-import 'package:workout_tracker/home_screen.dart';
+import 'package:workout_tracker/home_screen/addexcersize_day_screen.dart';
+import 'package:workout_tracker/home_screen/home_screen.dart';
 
-import 'Navigation_Controll/navigation_controll.dart';
-import 'Navigation_Controll/side_pannel_navigation.dart';
+import '../Navigation_Controll/navigation_controll.dart';
+import '../Navigation_Controll/side_pannel_navigation.dart';
 
 
 class SetUpRouteinDays extends StatelessWidget {
@@ -25,7 +25,7 @@ class SetUpRouteinDays extends StatelessWidget {
             const Text("Create Your Routine"),
           ],
         ),
-        backgroundColor: Colors.deepPurple[300],
+        backgroundColor: Colors.deepPurple,
         
       ),
       body: Column(
@@ -92,14 +92,14 @@ class SetUpRouteinDays extends StatelessWidget {
           ),
 
           if (fromSignup) ...[
-            const Text("Go To HomeScreen"),
+
             Padding(
               padding: const EdgeInsets.only(bottom: 60, top: 20),
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => const NavigationRoutePage()), // ✅ Change this
+                    MaterialPageRoute(builder: (context) => const NavigationRoutePage()),
                   );
                 },
                 style: ElevatedButton.styleFrom(

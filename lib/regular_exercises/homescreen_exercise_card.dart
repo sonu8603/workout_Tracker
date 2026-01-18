@@ -1,10 +1,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:workout_tracker/set_up_routein_days.dart';
+import 'package:workout_tracker/home_screen/set_up_routein_days.dart';
 
 import '../Providers/Excercise_provider.dart';
-import '../excersize_day_screen.dart';
+import '../home_screen/addexcersize_day_screen.dart';
 
 void showLeftPanel(BuildContext context) {
   showGeneralDialog(
