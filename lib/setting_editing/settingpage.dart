@@ -4,6 +4,7 @@ import 'package:workout_tracker/setting_editing/profile_edit.dart';
 import 'package:workout_tracker/Providers/auth_provider.dart';
 import 'package:workout_tracker/login_sign_up/logIn_screen.dart';
 
+
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
@@ -102,8 +103,9 @@ class SettingsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF7165D6),
-        iconTheme: const IconThemeData(
-          color: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 23),
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           "Settings",
@@ -151,7 +153,29 @@ class SettingsPage extends StatelessWidget {
               // Privacy
               ListTile(
                 onTap: () {
-                  // TODO: Navigate to privacy page
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text(
+                        "Coming Soon! ",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      margin: EdgeInsets.only(
+                        bottom: MediaQuery.of(context).size.height - 100,
+                        left: 20,
+                        right: 20,
+                      ),
+                      duration: const Duration(seconds: 2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  );
                 },
                 leading: Container(
                   padding: const EdgeInsets.all(10),
@@ -169,27 +193,6 @@ class SettingsPage extends StatelessWidget {
               ),
               const SizedBox(height: 30),
 
-              // Personal Details
-              ListTile(
-                onTap: () {
-                  // TODO: Navigate to personal details page
-                },
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.info_outline_rounded, size: 35),
-                ),
-                title: const Text(
-                  "Personal detail",
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-                ),
-                trailing: const Icon(Icons.arrow_forward_ios_rounded),
-              ),
-
-              const SizedBox(height: 30),
 
               // Logout
               ListTile(

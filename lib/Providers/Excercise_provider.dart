@@ -538,6 +538,11 @@ class ExerciseProvider with ChangeNotifier {
   List<Exercise> getExercisesForDay(String dayName) {
     try {
       final day = _days.firstWhere((d) => d.name == dayName);
+      return day.exercises.where((ex) {
+        return ex.date.year != 2000; // Don't show template exercises in history
+      }).toList();
+
+      // OR return all if you want to show them in routine view
       return List<Exercise>.from(day.exercises);
     } catch (e) {
       _lastError = 'Day not found: $dayName';
@@ -720,6 +725,9 @@ class ExerciseProvider with ChangeNotifier {
     for (var day in _days) {
       final exercises = day.exercises;
       for (var ex in exercises) {
+
+        if (ex.date.year == 2000) continue;
+
         if (ex.date.year == date.year &&
             ex.date.month == date.month &&
             ex.date.day == date.day) {
@@ -863,6 +871,7 @@ class ExerciseProvider with ChangeNotifier {
 
     return names;
   }
+
 
   @override
   void dispose() {

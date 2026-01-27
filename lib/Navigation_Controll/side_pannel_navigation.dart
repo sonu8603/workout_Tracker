@@ -1,13 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:workout_tracker/Graph_screen/graph_screen.dart';
-import 'dart:convert';
-import 'dart:io';
 import 'package:workout_tracker/home_screen/set_up_routein_days.dart';
-
 import '../Providers/Excercise_provider.dart';
+import '../Providers/auth_provider.dart';
 import '../home_screen/addexcersize_day_screen.dart';
 import '../setting_editing/settingpage.dart';
 
@@ -33,38 +31,19 @@ void showLeftPanel(BuildContext context) {
   );
 }
 
-class _SidePanelContent extends StatefulWidget {
+class _SidePanelContent extends StatelessWidget {
   const _SidePanelContent();
 
   @override
-  State<_SidePanelContent> createState() => _SidePanelContentState();
-}
-
-class _SidePanelContentState extends State<_SidePanelContent> {
-  String userName = "Guest User";
-  String? userPhotoUrl;
-  String? userPhotoBase64; // Store image as base64
-  final ImagePicker _picker = ImagePicker();
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserData();
-  }
-
-  Future<void> _loadUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      userName = prefs.getString('user_name') ?? "Guest User";
-      userPhotoUrl = prefs.getString('user_photo_url');
-      userPhotoBase64 = prefs.getString('user_photo_base64');
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<ExerciseProvider>(context, listen: false);
-    final todayName = provider.today.name;
+    final exerciseProvider = Provider.of<ExerciseProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context);
+    final todayName = exerciseProvider.today.name;
+
+    // Get user info from AuthProvider (which has backend data)
+    final userName = authProvider.username ?? 'Guest User';
+    final userEmail = authProvider.email ?? '';
+    final userPhotoUrl = authProvider.userData?['profileImage'];
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -86,12 +65,11 @@ class _SidePanelContentState extends State<_SidePanelContent> {
           ),
           child: Column(
             children: [
-              // ========== USER PROFILE HEADER ==========
-              _buildProfileHeader(context),
-
+              // Profile Header
+              _buildProfileHeader(context, userName, userEmail, userPhotoUrl),
               const Divider(height: 1),
 
-              // ========== MENU ITEMS ==========
+              // Menu Items
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -139,9 +117,6 @@ class _SidePanelContentState extends State<_SidePanelContent> {
                             builder: (context) => GraphScreen(),
                           ),
                         );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Progress tracking clicked!")),
-                        );
                       },
                     ),
                     const Divider(indent: 16, endIndent: 16),
@@ -155,7 +130,7 @@ class _SidePanelContentState extends State<_SidePanelContent> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => SettingsPage(),
+                            builder: (context) => const SettingsPage(),
                           ),
                         );
                       },
@@ -174,7 +149,7 @@ class _SidePanelContentState extends State<_SidePanelContent> {
                 ),
               ),
 
-              // ========== FOOTER ==========
+              // Footer
               _buildFooter(context),
             ],
           ),
@@ -183,21 +158,16 @@ class _SidePanelContentState extends State<_SidePanelContent> {
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context) {
+  Widget _buildProfileHeader(BuildContext context, String userName, String userEmail, String? photoUrl) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Colors.deepPurple.shade400,
-            Colors.deepPurple.shade700,
-          ],
+          colors: [Colors.deepPurple.shade400, Colors.deepPurple.shade700],
         ),
-        borderRadius: const BorderRadius.only(
-          topRight: Radius.circular(25),
-        ),
+        borderRadius: const BorderRadius.only(topRight: Radius.circular(25)),
       ),
       child: SafeArea(
         bottom: false,
@@ -205,53 +175,29 @@ class _SidePanelContentState extends State<_SidePanelContent> {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              // Profile Photo
-              GestureDetector(
-                onTap: () => _showProfileOptions(context),
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 3),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 10,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: CircleAvatar(
-                    radius: 45,
-                    backgroundColor: Colors.white,
-                    backgroundImage: _getProfileImage(),
-                    child: _getProfileImage() == null
-                        ? Text(
-                      _getInitials(userName),
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple,
-                      ),
-                    )
-                        : null,
-                  ),
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10)],
+                ),
+                child: CircleAvatar(
+                  radius: 45,
+                  backgroundColor: Colors.white,
+                  // 2. FIXED IMAGE LOGIC:
+                  backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+                      ? (photoUrl.startsWith('data:image')
+                      ? MemoryImage(base64Decode(photoUrl.split(',')[1]))
+                      : NetworkImage(photoUrl)) as ImageProvider
+                      : null,
+                  child: photoUrl == null || photoUrl.isEmpty
+                      ? Text(_getInitials(userName), style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.deepPurple))
+                      : null,
                 ),
               ),
               const SizedBox(height: 16),
-
-              // User Name
-              Text(
-                userName,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 4),
-              
-
+              Text(userName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+              Text(userEmail, style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.9))),
             ],
           ),
         ),
@@ -313,12 +259,12 @@ class _SidePanelContentState extends State<_SidePanelContent> {
             },
           ),
           const SizedBox(width: 12),
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
+                Text(
                   "Workout Tracker",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -329,7 +275,7 @@ class _SidePanelContentState extends State<_SidePanelContent> {
                   "Version 1.0.0",
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade600,
+                    color: Colors.grey,
                   ),
                 ),
               ],
@@ -345,305 +291,6 @@ class _SidePanelContentState extends State<_SidePanelContent> {
     if (parts.isEmpty) return 'G';
     if (parts.length == 1) return parts[0][0].toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
-
-  ImageProvider? _getProfileImage() {
-    // Priority: Local photo > URL photo > null (show initials)
-    if (userPhotoBase64 != null && userPhotoBase64!.isNotEmpty) {
-      try {
-        return MemoryImage(base64Decode(userPhotoBase64!));
-      } catch (e) {
-        debugPrint('Error decoding base64 image: $e');
-      }
-    }
-
-    if (userPhotoUrl != null && userPhotoUrl!.isNotEmpty) {
-      return NetworkImage(userPhotoUrl!);
-    }
-
-    return null;
-  }
-
-  Future<void> _pickImageFromGallery() async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        final bytes = await File(image.path).readAsBytes();
-        final base64Image = base64Encode(bytes);
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_photo_base64', base64Image);
-        await prefs.remove('user_photo_url'); // Clear URL if exists
-
-        setState(() {
-          userPhotoBase64 = base64Image;
-          userPhotoUrl = null;
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Profile photo updated!"),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('Error picking image: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Error: ${e.toString()}"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _pickImageFromCamera() async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.camera,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        final bytes = await File(image.path).readAsBytes();
-        final base64Image = base64Encode(bytes);
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_photo_base64', base64Image);
-        await prefs.remove('user_photo_url'); // Clear URL if exists
-
-        setState(() {
-          userPhotoBase64 = base64Image;
-          userPhotoUrl = null;
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Profile photo updated!"),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('Error taking photo: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Error: ${e.toString()}"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  void _showProfileOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "Profile Photo",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.photo_library, color: Colors.blue),
-              ),
-              title: const Text("Choose from Gallery"),
-              subtitle: const Text("Select photo from your phone"),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImageFromGallery();
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.camera_alt, color: Colors.green),
-              ),
-              title: const Text("Take Photo"),
-              subtitle: const Text("Use your camera"),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImageFromCamera();
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.link, color: Colors.orange),
-              ),
-              title: const Text("Use Photo URL"),
-              subtitle: const Text("Paste image link"),
-              onTap: () {
-                Navigator.pop(context);
-                _showPhotoUrlDialog(context);
-              },
-            ),
-            if (userPhotoBase64 != null || userPhotoUrl != null)
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.delete, color: Colors.red),
-                ),
-                title: const Text("Remove Photo"),
-                subtitle: const Text("Use default avatar"),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.remove('user_photo_url');
-                  await prefs.remove('user_photo_base64');
-
-                  setState(() {
-                    userPhotoUrl = null;
-                    userPhotoBase64 = null;
-                  });
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Photo removed")),
-                  );
-                },
-              ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      ),
-    );
-  }
-
-
-  void _showPhotoUrlDialog(BuildContext context) {
-    final urlController = TextEditingController(text: userPhotoUrl ?? '');
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Profile Photo URL"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: urlController,
-              decoration: const InputDecoration(
-                labelText: "Photo URL",
-                hintText: "https://example.com/photo.jpg",
-                prefixIcon: Icon(Icons.link),
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              "Paste a direct image URL (e.g., from Google profile or any public image)",
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () async {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.remove('user_photo_url');
-
-              setState(() {
-                userPhotoUrl = null;
-              });
-
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Photo removed")),
-              );
-            },
-            child: const Text("Remove Photo"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final url = urlController.text.trim();
-              if (url.isEmpty) {
-                Navigator.pop(context);
-                return;
-              }
-
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setString('user_photo_url', url);
-
-              setState(() {
-                userPhotoUrl = url;
-              });
-
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Photo updated!")),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepPurple,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text("Save"),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showHelpDialog(BuildContext context) {

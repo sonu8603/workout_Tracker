@@ -6,7 +6,7 @@ import '../Extra_exercise/extra_exercise_screen.dart';
 import '../models/individual_exercise_model.dart';
 import '../regular_exercises/regular_exercise_screen.dart';
 
-// Expandable Exercise Card Widget for regular and extra
+// Expandable Exercise Card Widget for regular and extra  on home screen
 class ExpandableExerciseCard extends StatefulWidget {
   final Exercise exercise;
   final String keyId;

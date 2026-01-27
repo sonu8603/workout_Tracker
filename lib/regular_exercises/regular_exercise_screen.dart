@@ -64,7 +64,7 @@ class RegularExerciseScreen extends StatelessWidget {
         itemBuilder: (context, index) {
           // Use the actual index from the full list
           final actualIndex = exerciseIndex ?? index;
-          return _ExerciseCard(
+          return ExpandableRegularExerciseCard(
             exercise: exercisesToShow[index],
             exerciseIndex: actualIndex,
             dayName: dayName,
@@ -147,8 +147,8 @@ class RegularExerciseScreen extends StatelessWidget {
                   final exerciseProvider =
                   Provider.of<ExerciseProvider>(context, listen: false);
                   int numberOfSets = int.tryParse(setsController.text) ?? 3;
-                  exerciseProvider.addExerciseToDay(
-                      dayName, nameController.text.trim(), numberOfSets,DateTime.now());
+                  exerciseProvider.addExerciseToDay(dayName,
+                      nameController.text.trim(), numberOfSets, DateTime.now());
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -198,28 +198,69 @@ class RegularExerciseScreen extends StatelessWidget {
   }
 }
 
-// Individual Exercise Card Widget
-class _ExerciseCard extends StatelessWidget {
+
+
+class ExpandableRegularExerciseCard extends StatefulWidget {
   final Exercise exercise;
   final int exerciseIndex;
   final String dayName;
   final VoidCallback onDelete;
 
-  const _ExerciseCard({
+  const ExpandableRegularExerciseCard({
+    super.key,
     required this.exercise,
     required this.exerciseIndex,
     required this.dayName,
     required this.onDelete,
   });
 
+  @override
+  State<ExpandableRegularExerciseCard> createState() => _CollapsibleRegularExerciseCardState();
+}
+
+class _CollapsibleRegularExerciseCardState extends State<ExpandableRegularExerciseCard>
+    with SingleTickerProviderStateMixin {
+  bool _isExpanded = false;
+  late AnimationController _animationController;
+  late Animation<double> _iconRotation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _iconRotation = Tween<double>(begin: 0.0, end: 0.5).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _toggleExpansion() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+      if (_isExpanded) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+      }
+    });
+  }
+
   void _addSet(BuildContext context) {
     final exerciseProvider =
     Provider.of<ExerciseProvider>(context, listen: false);
-    exerciseProvider.addSetToDayExercise(dayName, exerciseIndex);
+    exerciseProvider.addSetToDayExercise(widget.dayName, widget.exerciseIndex);
   }
 
   void _removeSet(BuildContext context) {
-    if (exercise.sets.length <= 1) {
+    if (widget.exercise.sets.length <= 1) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Exercise must have at least 1 set")),
       );
@@ -227,12 +268,13 @@ class _ExerciseCard extends StatelessWidget {
     }
     final exerciseProvider =
     Provider.of<ExerciseProvider>(context, listen: false);
-    exerciseProvider.removeSetFromDayExercise(dayName, exerciseIndex);
+    exerciseProvider.removeSetFromDayExercise(
+        widget.dayName, widget.exerciseIndex);
   }
 
   @override
   Widget build(BuildContext context) {
-    int completedSets = exercise.sets
+    int completedSets = widget.exercise.sets
         .where((s) => s.weight.isNotEmpty && s.reps.isNotEmpty)
         .length;
 
@@ -240,120 +282,253 @@ class _ExerciseCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.deepPurple.withOpacity(0.3), width: 2),
+        side: BorderSide(
+          color: _isExpanded
+              ? Colors.deepPurple
+              : Colors.deepPurple.withOpacity(0.3),
+          width: _isExpanded ? 2 : 1,
+        ),
       ),
-      elevation: 3,
+      elevation: _isExpanded ? 8 : 3,
       child: Column(
         children: [
-          // Exercise Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.deepPurple.withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(14),
-                topRight: Radius.circular(14),
+          // ========== COLLAPSED HEADER (Always Visible) ==========
+          InkWell(
+            onTap: _toggleExpansion,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _isExpanded
+                    ? Colors.deepPurple.withOpacity(0.15)
+                    : Colors.deepPurple.withOpacity(0.08),
+                borderRadius: _isExpanded
+                    ? const BorderRadius.only(
+                  topLeft: Radius.circular(14),
+                  topRight: Radius.circular(14),
+                )
+                    : BorderRadius.circular(14),
               ),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.fitness_center, color: Colors.deepPurple),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            exercise.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+              child: Row(
+                children: [
+                  // Exercise Icon
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurple.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.fitness_center,
+                      color: Colors.deepPurple,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Exercise Info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.exercise.name,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
-                          Text(
-                            "$completedSets/${exercise.sets.length} sets completed",
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.check_circle,
+                                size: 14,
+                                color: completedSets == widget.exercise.sets.length
+                                    ? Colors.green
+                                    : Colors.grey),
+                            const SizedBox(width: 4),
+                            Text(
+                              "$completedSets/${widget.exercise.sets.length} sets",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      onPressed: onDelete,
+                  ),
+
+                  // Expand/Collapse Icon
+                  RotationTransition(
+                    turns: _iconRotation,
+                    child: Icon(
+                      Icons.expand_more,
+                      color: Colors.deepPurple,
+                      size: 28,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Add/Remove Set Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () => _removeSet(context),
-                      icon: const Icon(Icons.remove, size: 18),
-                      label: const Text("Remove Set"),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                        padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    ElevatedButton.icon(
-                      onPressed: () => _addSet(context),
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text("Add Set",style: TextStyle(fontWeight: FontWeight.bold,color: Colors.black45),),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple[300],
-                        padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
 
-          // Sets List
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-
+          // ========== EXPANDED CONTENT ==========
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Column(
               children: [
-                // Header Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Text("Set",
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text("Weight (kg)",
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 16),
-                    Text("Reps",
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    SizedBox(width: 10,),
-                  ],
-                ),
-                const Divider(height: 24),
+                const Divider(height: 1),
 
-                // Set Rows
-                ...exercise.sets.asMap().entries.map((entry) {
-                  return RegularSetRow(
-                    set: entry.value,
-                    exerciseIndex: exerciseIndex,
-                    setIndex: entry.key,
-                    dayName: dayName,
-                  );
-                }).toList(),
+                // Action Buttons Row
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      // Add Set Button
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _addSet(context),
+                          icon: const Icon(Icons.add, size: 18),
+                          label: const Text("Add Set"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepPurple[300],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Remove Set Button
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _removeSet(context),
+                          icon: const Icon(Icons.remove, size: 18),
+                          label: const Text("Remove"),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Delete Exercise Button
+                      IconButton(
+                        onPressed: widget.onDelete,
+                        icon: const Icon(Icons.delete_outline),
+                        color: Colors.red,
+                        iconSize: 24,
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.red.withOpacity(0.1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Sets Table
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
+                    children: [
+                      // Table Header
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(10),
+                            topRight: Radius.circular(10),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 40,
+                              child: Text(
+                                "Set",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                "Weight (kg)",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                "Reps",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Set Rows
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(10),
+                            bottomRight: Radius.circular(10),
+                          ),
+                        ),
+                        child: Column(
+                          children: widget.exercise.sets
+                              .asMap()
+                              .entries
+                              .map((entry) {
+                            return RegularSetRow(
+                              set: entry.value,
+                              exerciseIndex: widget.exerciseIndex,
+                              setIndex: entry.key,
+                              dayName: widget.dayName,
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
+            crossFadeState: _isExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 300),
           ),
         ],
       ),

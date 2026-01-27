@@ -18,6 +18,9 @@ class GraphExerciseListView extends StatelessWidget {
     for (var day in provider.days) {
       final exercises = day.exercises;
       for (var ex in exercises) {
+        // ✅ NEW: Skip template exercises (year 2000)
+        if (ex.date.year == 2000) continue;
+
         allExercises.add(ex.name);
       }
     }

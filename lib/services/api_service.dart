@@ -6,16 +6,13 @@ import 'package:flutter/foundation.dart';
 import '../config/apiconfig.dart';
 
 class ApiService {
-
   static const String authBoxName = 'auth_data';
 
   static Box get _authBox => Hive.box(authBoxName);
 
-
-
   static Future<void> saveToken(String token) async {
     await _authBox.put('auth_token', token);
-    if (kDebugMode) debugPrint(' Token saved');
+    if (kDebugMode) debugPrint('✅ Token saved');
   }
 
   static String? getToken() {
@@ -31,7 +28,7 @@ class ApiService {
 
   static Future<void> saveUserData(Map<String, dynamic> userData) async {
     await _authBox.put('user_data', userData);
-    if (kDebugMode) debugPrint(' User data saved');
+    if (kDebugMode) debugPrint('✅ User data saved');
   }
 
   static Map<String, dynamic>? getUserData() {
@@ -78,6 +75,7 @@ class ApiService {
         return {
           'success': true,
           'message': data['message'],
+          'token': data['token'],
           'user': data['user'],
         };
       } else {
@@ -92,7 +90,7 @@ class ApiService {
         'message': 'Cannot connect to server. Please check your internet connection.',
       };
     } catch (e) {
-      if (kDebugMode) debugPrint(' Error: $e');
+      if (kDebugMode) debugPrint('❌ Error: $e');
       return {
         'success': false,
         'message': 'Network error. Please try again.',
@@ -101,17 +99,17 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> login({
-    required String email,
+    required String identifier,
     required String password,
   }) async {
     try {
-      if (kDebugMode) debugPrint('🔵 Logging in: $email');
+      if (kDebugMode) debugPrint('🔵 Logging in: $identifier');
 
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          'email': email,
+          'identifier': identifier,
           'password': password,
         }),
       ).timeout(const Duration(seconds: 15));
@@ -126,6 +124,7 @@ class ApiService {
         return {
           'success': true,
           'message': data['message'],
+          'token': data['token'],
           'user': data['user'],
         };
       } else {
@@ -148,7 +147,6 @@ class ApiService {
     }
   }
 
-  // 🆕 FORGOT PASSWORD
   static Future<Map<String, dynamic>> forgotPassword({
     required String email,
   }) async {
@@ -185,7 +183,6 @@ class ApiService {
     }
   }
 
-  // 🆕 RESET PASSWORD
   static Future<Map<String, dynamic>> resetPassword({
     required String resetToken,
     required String newPassword,
@@ -231,21 +228,38 @@ class ApiService {
         };
       }
 
+      if (kDebugMode) debugPrint('🔵 Fetching profile from: ${ApiConfig.baseUrl}/auth/me');
+
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/user/profile'),
+        Uri.parse('${ApiConfig.baseUrl}/auth/me'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
       ).timeout(const Duration(seconds: 10));
 
+      if (kDebugMode) {
+        debugPrint('🔥 Profile Status: ${response.statusCode}');
+        debugPrint('🔥 Profile Body: ${response.body}');
+      }
+
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        return {
+        final userProfile = {
           'success': true,
-          'profile': data,
+          'username': data['user']['username'],
+          'email': data['user']['email'],
+          'phone': data['user']['phone'],
+          'profileImage': data['user']['profileImage'],
+          'id': data['user']['id'],
+          'role': data['user']['role'],
+          'isActive': data['user']['isActive'],
+          'createdAt': data['user']['createdAt'],
         };
+
+        await saveUserData(data['user']);
+        return userProfile;
       } else {
         return {
           'success': false,
@@ -253,6 +267,17 @@ class ApiService {
         };
       }
     } catch (e) {
+      if (kDebugMode) debugPrint('🔴 Profile fetch error: $e');
+
+      final cachedData = getUserData();
+      if (cachedData != null) {
+        if (kDebugMode) debugPrint('📦 Returning cached user data');
+        return {
+          'success': true,
+          ...cachedData,
+        };
+      }
+
       return {
         'success': false,
         'message': 'Network error',
@@ -312,6 +337,51 @@ class ApiService {
         };
       }
     } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateProfileImage(String imageUrl) async {
+    try {
+      final token = getToken();
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Not authenticated',
+        };
+      }
+
+      if (kDebugMode) debugPrint('🔵 Updating profile image...');
+
+      final response = await http.put(
+        Uri.parse('${ApiConfig.baseUrl}/user/profile-image'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({'profileImage': imageUrl}),
+      ).timeout(const Duration(seconds: 15));
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        if (kDebugMode) debugPrint('✅ Profile image updated');
+        return {
+          'success': true,
+          'message': data['message'],
+          'profileImage': data['profileImage'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to update profile image',
+        };
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('🔴 Profile image error: $e');
       return {
         'success': false,
         'message': 'Network error',

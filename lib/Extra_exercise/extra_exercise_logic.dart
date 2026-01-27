@@ -1,5 +1,4 @@
-
-// Individual Set Row Widget
+// Individual Set Row Widget for Extra Exercises
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -85,13 +84,31 @@ class _SetRowState extends State<SetRow> {
     }
   }
 
+  // ✅ FIXED: Better completion check logic
+  bool _isSetCompleted() {
+    // Empty check
+    if (widget.set.weight.isEmpty || widget.set.reps.isEmpty) {
+      return false;
+    }
+
+    // Parse values
+    final weight = double.tryParse(widget.set.weight);
+    final reps = int.tryParse(widget.set.reps);
+
+    // Both must be valid numbers AND greater than 0
+    return weight != null &&
+        reps != null &&
+        weight > 0 &&
+        reps > 0;
+  }
+
   @override
   Widget build(BuildContext context) {
-    bool isCompleted = widget.set.weight.isNotEmpty &&
-        widget.set.reps.isNotEmpty;
+    // ✅ Use the improved completion check
+    bool isCompleted = _isSetCompleted();
 
     return GestureDetector(
-      behavior: HitTestBehavior.translucent, // ensures all taps are caught
+      behavior: HitTestBehavior.translucent,
       onTap: () => FocusScope.of(context).unfocus(),
       child: Padding(
         padding: const EdgeInsets.only(bottom: 16),
@@ -125,7 +142,6 @@ class _SetRowState extends State<SetRow> {
                         // Minus button
                         SizedBox(
                           width: 32,
-
                           child: IconButton(
                             icon: const Icon(Icons.remove_circle_outline),
                             color: Colors.orange,
@@ -138,7 +154,6 @@ class _SetRowState extends State<SetRow> {
                         const SizedBox(width: 5),
 
                         // Weight Input
-
                         Expanded(
                           flex: 3,
                           child: TextField(
@@ -159,7 +174,7 @@ class _SetRowState extends State<SetRow> {
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: const BorderSide(
-                                    color: Colors.purple,
+                                    color: Colors.orange,
                                     width: 2
                                 ),
                               ),
@@ -177,7 +192,7 @@ class _SetRowState extends State<SetRow> {
                         SizedBox(
                           width: 32,
                           child: IconButton(
-                            icon: const Icon(Icons.add_circle_outline,),
+                            icon: const Icon(Icons.add_circle_outline),
                             color: Colors.orange,
                             iconSize: 24,
                             onPressed: _incrementWeight,
@@ -189,7 +204,13 @@ class _SetRowState extends State<SetRow> {
                     ),
                     const SizedBox(height: 2),
                     const Text(
-                        "kg", style: TextStyle(fontSize: 13, color: Colors.grey,fontWeight: FontWeight.w700)),
+                        "kg",
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w700
+                        )
+                    ),
                   ],
                 ),
               ),
@@ -197,74 +218,80 @@ class _SetRowState extends State<SetRow> {
             const SizedBox(width: 6),
 
             // Reps Section with +/- buttons
-        Expanded(
-          child: Column(
-            children: [
-              Row(
+            Expanded(
+              child: Column(
                 children: [
-                  // Minus button
-                  IconButton(
-                    icon: const Icon(Icons.remove_circle_outline),
-                    color: Colors.orange,
-                    iconSize: 24,
-                    onPressed: _decrementReps,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const SizedBox(width: 2),
-
-                  // Reps Input
-                  Expanded(
-                    flex: 3,
-                    child: TextField(
-                      controller: repsController,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      decoration: InputDecoration(
-                        hintText: "0",
-                        border: OutlineInputBorder(borderRadius: BorderRadius
-                            .circular(7)),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 1, vertical: 8),
-                        isDense: true,
+                  Row(
+                    children: [
+                      // Minus button
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline),
+                        color: Colors.orange,
+                        iconSize: 24,
+                        onPressed: _decrementReps,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
-                      onChanged: (value) => _updateSet(),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
+                      const SizedBox(width: 2),
 
-                  // Plus button
-                  Expanded(
-                    child: IconButton(
-                      icon: const Icon(Icons.add_circle_outline),
-                      color: Colors.orange,
-                      iconSize: 24,
-                      onPressed: _incrementReps,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                      // Reps Input
+                      Expanded(
+                        flex: 3,
+                        child: TextField(
+                          controller: repsController,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          decoration: InputDecoration(
+                            hintText: "0",
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(7)
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 1, vertical: 8),
+                            isDense: true,
+                          ),
+                          onChanged: (value) => _updateSet(),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+
+                      // Plus button
+                      Expanded(
+                        child: IconButton(
+                          icon: const Icon(Icons.add_circle_outline),
+                          color: Colors.orange,
+                          iconSize: 24,
+                          onPressed: _incrementReps,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  const Padding(
+                    padding: EdgeInsets.only(left: 10),
+                    child: Text(
+                        "reps",
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w700
+                        )
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 2),
-              Padding(
-                padding: const EdgeInsets.only(left: 10),
-                child: const Text(
-                    "reps",  style: TextStyle(fontSize: 13, color: Colors.grey,fontWeight: FontWeight.w700)),
-              ),
-            ],
-          ),
-        ),
+            ),
 
-        // Check Icon
-        SizedBox(
-          width: 20,
-          child: isCompleted
-              ? const Icon(Icons.check_circle, color: Colors.green, size: 28)
-              : const Icon(
-              Icons.circle_outlined, color: Colors.grey, size: 28),
-        ),
-        ],
+            // Check Icon
+            SizedBox(
+              width: 20,
+              child: isCompleted
+                  ? const Icon(Icons.check_circle, color: Colors.green, size: 28)
+                  : const Icon(Icons.circle_outlined, color: Colors.grey, size: 28),
+            ),
+          ],
         ),
       ),
     );

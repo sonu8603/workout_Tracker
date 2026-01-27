@@ -185,17 +185,18 @@ class _LogInScreenState extends State<LogInScreen>
                   // Email Field
                   _buildModernTextField(
                     controller: _emailController,
-                    label: "Email",
-                    hint: "Enter email",
+                    label: "Email/username",
+                    hint: "Enter email or username",
                     icon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Please enter your email';
                       }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                        return 'Please enter a valid email';
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter email or username';
                       }
+
                       return null;
                     },
                   ),

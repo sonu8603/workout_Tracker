@@ -41,9 +41,11 @@ class _GraphScreenState extends State<GraphScreen> {
     // Get all unique exercises with actual data
     final Set<String> allExercises = {};
 
-    // From weekly exercises
     for (var day in provider.days) {
       for (var exercise in day.exercises) {
+        // ✅ ADD THIS: Skip template exercises
+        if (exercise.date.year == 2000) continue;
+
         // Only include if exercise has at least one set with data
         if (exercise.sets.any((s) => s.weight.isNotEmpty || s.reps.isNotEmpty)) {
           allExercises.add(exercise.name);
