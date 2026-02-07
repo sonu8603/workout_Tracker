@@ -4,12 +4,12 @@ import '../Providers/Excercise_provider.dart';
 
 class AddExerciseScreen extends StatefulWidget {
   final String day;
-  final bool isRoutineSetup; // ✅ NEW: Flag for routine setup vs actual workout
+  final bool isRoutineSetup;
 
   const AddExerciseScreen({
     super.key,
     required this.day,
-    this.isRoutineSetup = false, // Default: false (normal workout)
+    this.isRoutineSetup = false,
   });
 
   @override
@@ -27,7 +27,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
 
   void _addExercise() {
     final exerciseName = _exerciseController.text.trim();
-    const sets = 3; // ✅ Fixed to 3 sets, user can add more from home screen
+    const sets = 3;
 
     if (exerciseName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -38,7 +38,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
 
     final provider = Provider.of<ExerciseProvider>(context, listen: false);
 
-    // ✅ CRITICAL FIX: Use template date for routine setup
+
     final DateTime dateToUse;
     if (widget.isRoutineSetup) {
       dateToUse = DateTime(2000, 1, 1); // Template date - won't show in history
@@ -50,7 +50,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
       widget.day,
       exerciseName,
       sets,
-      dateToUse, // ✅ Context-aware date
+      dateToUse,
     );
 
     // Clear input
@@ -69,7 +69,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
     );
   }
 
-  // ✅ Edit Exercise Name Dialog
+  //  Edit Exercise Name Dialog
   void _showEditDialog(BuildContext context, ExerciseProvider provider, String currentName, int index) {
     final TextEditingController editController = TextEditingController(text: currentName);
 
@@ -128,6 +128,10 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
       appBar: AppBar(
         title: Text(widget.day),
         backgroundColor: Colors.deepPurple,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 23),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),

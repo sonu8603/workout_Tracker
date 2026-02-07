@@ -16,7 +16,7 @@ class _NavigationRoutePageState extends State<NavigationRoutePage> {
   final _screens = const [
     HomeScreen(),
     GraphScreen(),
-    HistoryScreen(),
+    HistoryWorkoutLogsScreen(),
   ];
 
   void _onItemTapped(int index) {

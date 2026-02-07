@@ -23,10 +23,14 @@ class SetUpRouteinDays extends StatelessWidget {
           ],
         ),
         backgroundColor: Colors.deepPurple,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 23),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Column(
         children: [
-          // Info banner explaining this is template setup
+
           Container(
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(12),
@@ -95,25 +99,25 @@ class SetUpRouteinDays extends StatelessWidget {
                         exerciseProvider.toggleDay(index, value);
                       },
                     ),
-                    onTap: () {
-                      if (day.enabled) {
-                        // ✅ CRITICAL: Pass isRoutineSetup = true
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AddExerciseScreen(
-                              day: day.name,
-                              isRoutineSetup: true, // ✅ This prevents date marking
-                            ),
-                          ),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text("${day.name} is a rest day")),
-                        );
-                      }
-                    },
+                    // onTap: () {
+                    //   if (day.enabled) {
+                    //
+                    //     Navigator.push(
+                    //       context,
+                    //       MaterialPageRoute(
+                    //         builder: (context) => AddExerciseScreen(
+                    //           day: day.name,
+                    //           isRoutineSetup: true,
+                    //         ),
+                    //       ),
+                    //     );
+                    //   } else {
+                    //     ScaffoldMessenger.of(context).showSnackBar(
+                    //       SnackBar(
+                    //           content: Text("${day.name} is a rest day")),
+                    //     );
+                    //   }
+                    // },
                   ),
                 );
               },

@@ -9,6 +9,7 @@ import 'models/individual_set.dart';
 import 'models/individual_exercise_model.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'models/workout_day.dart';
+import 'models/workout_log_model.dart';
 import 'Providers/Excercise_provider.dart';
 import 'Providers/auth_provider.dart';
 
@@ -17,10 +18,13 @@ class HiveConfig {
   static const String extraExercisesBox = 'extra_exercises';
   static const String settingsBox = 'settings';
   static const String authBox = 'auth_data';
+  static const String workoutLogsBox = 'workout_logs';
 
   static const int exerciseSetAdapterId = 1;
   static const int exerciseAdapterId = 3;
   static const int workoutDayAdapterId = 4;
+  static const int completedExerciseAdapterId = 5;
+  static const int workoutLogAdapterId = 6;
 }
 
 void main() async {
@@ -37,7 +41,6 @@ void main() async {
   runApp(const MyApp());
 }
 
-/// Only initializes Hive - no UI logic here
 Future<void> _initializeHive() async {
   try {
     await Hive.initFlutter();
@@ -51,12 +54,19 @@ Future<void> _initializeHive() async {
     if (!Hive.isAdapterRegistered(HiveConfig.workoutDayAdapterId)) {
       Hive.registerAdapter(WorkoutDayAdapter());
     }
+    if (!Hive.isAdapterRegistered(HiveConfig.completedExerciseAdapterId)) {
+      Hive.registerAdapter(CompletedExerciseAdapter());
+    }
+    if (!Hive.isAdapterRegistered(HiveConfig.workoutLogAdapterId)) {
+      Hive.registerAdapter(WorkoutLogAdapter());
+    }
 
     await Future.wait([
       Hive.openBox<WorkoutDay>(HiveConfig.workoutDaysBox),
       Hive.openBox(HiveConfig.extraExercisesBox),
       Hive.openBox(HiveConfig.settingsBox),
       Hive.openBox(HiveConfig.authBox),
+      Hive.openBox<WorkoutLog>(HiveConfig.workoutLogsBox),
     ]);
 
     debugPrint('✅ Hive initialized successfully');

@@ -7,13 +7,13 @@ import '../models/individual_exercise_model.dart';
 import '../regular_exercises/regular_exercise_screen.dart';
 
 // Expandable Exercise Card Widget for regular and extra  on home screen
-class ExpandableExerciseCard extends StatefulWidget {
+class ExerciseCard extends StatefulWidget {
   final Exercise exercise;
   final String keyId;
   final int exerciseIndex;
   final bool isRegular;
 
-  const ExpandableExerciseCard({
+  const ExerciseCard({
     required this.exercise,
     required this.keyId,
     required this.exerciseIndex,
@@ -21,9 +21,9 @@ class ExpandableExerciseCard extends StatefulWidget {
   });
 
   @override
-  State<ExpandableExerciseCard> createState() => _ExpandableExerciseCardState();
+  State<ExerciseCard> createState() => _ExerciseCardState();
 }
-class _ExpandableExerciseCardState extends State<ExpandableExerciseCard> {
+class _ExerciseCardState extends State<ExerciseCard> {
   bool _isExpanded = false;
 
   @override

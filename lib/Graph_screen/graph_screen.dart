@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../Providers/Excercise_provider.dart';
-import '../models/individual_exercise_model.dart';
+import '../models/individual_set.dart';
 
 class GraphScreen extends StatefulWidget {
   const GraphScreen({super.key});
@@ -15,6 +15,7 @@ class GraphScreen extends StatefulWidget {
 class _GraphScreenState extends State<GraphScreen> {
   String? selectedExercise;
   int selectedSetIndex = 0;
+
   final TextEditingController _searchController = TextEditingController();
   List<String> _searchResults = [];
   bool _isSearching = false;
@@ -25,6 +26,8 @@ class _GraphScreenState extends State<GraphScreen> {
     super.dispose();
   }
 
+  // ===================== SEARCH LOGIC =====================
+
   void _searchExercise(String query, ExerciseProvider provider) {
     if (query.trim().isEmpty) {
       setState(() {
@@ -34,51 +37,53 @@ class _GraphScreenState extends State<GraphScreen> {
       return;
     }
 
-    setState(() {
-      _isSearching = true;
-    });
+    setState(() => _isSearching = true);
 
-    // Get all unique exercises with actual data
     final Set<String> allExercises = {};
 
+// Weekly exercises
     for (var day in provider.days) {
-      for (var exercise in day.exercises) {
-        // ✅ ADD THIS: Skip template exercises
-        if (exercise.date.year == 2000) continue;
-
-        // Only include if exercise has at least one set with data
-        if (exercise.sets.any((s) => s.weight.isNotEmpty || s.reps.isNotEmpty)) {
-          allExercises.add(exercise.name);
+      for (var ex in day.exercises) {
+        if (ex.date.year == 2000) continue;
+        if (ex.sets.any((s) => s.weight.isNotEmpty || s.reps.isNotEmpty)) {
+          allExercises.add(ex.name);
         }
       }
     }
 
-    // From extra exercises
-    final allDates = provider.getAllExtraExerciseDates();
-    for (var date in allDates) {
-      final exercises = provider.getAllExercisesForDate(date);
-      for (var exercise in exercises) {
-        if (exercise.sets.any((s) => s.weight.isNotEmpty || s.reps.isNotEmpty)) {
-          allExercises.add(exercise.name);
+// Extra exercises
+    final extraDates = provider.getAllExtraExerciseDates();
+    for (var date in extraDates) {
+      for (var ex in provider.getAllExercisesForDate(date)) {
+        if (ex.sets.any((s) => s.weight.isNotEmpty || s.reps.isNotEmpty)) {
+          allExercises.add(ex.name);
         }
       }
     }
 
-    // Filter by search query
+
+    // Workout logs (if you have them)
+    final logDates = provider.getAllWorkoutLogDates();
+    for (var date in logDates) {
+      final logs = provider.getWorkoutLogsForDate(date);
+      for (var log in logs) {
+        for (var ex in log.exercises) {
+          allExercises.add(ex.name);
+        }
+      }
+    }
+
+
+
     final results = allExercises
-        .where((name) => name.toLowerCase().contains(query.toLowerCase()))
+        .where((e) => e.toLowerCase().contains(query.toLowerCase()))
         .toList()
       ..sort();
 
-    setState(() {
-      _searchResults = results;
-    });
-
-    if (kDebugMode) {
-      debugPrint('Search query: $query');
-      debugPrint('Results found: ${results.length}');
-    }
+    setState(() => _searchResults = results);
   }
+
+  // UI  part
 
   @override
   Widget build(BuildContext context) {
@@ -87,27 +92,33 @@ class _GraphScreenState extends State<GraphScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Progress Tracker"),
+        automaticallyImplyLeading: false,
+        leading: (ModalRoute.of(context)?.canPop ?? false)
+            ? IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 22),
+          onPressed: () => Navigator.pop(context),
+        )
+            : null,
         backgroundColor: Colors.deepPurple,
-        elevation: 0,
+
+
       ),
       body: Column(
         children: [
-          // Search Bar
           _buildSearchBar(provider),
 
-          // Search Results or Selected Exercise
           if (_isSearching && _searchResults.isNotEmpty)
             _buildSearchResults()
           else if (_isSearching && _searchResults.isEmpty)
             _buildNoResults()
           else if (selectedExercise == null)
-              Expanded(child: _buildWelcomeScreen())
+              Expanded(child: _buildWelcome())
             else
               Expanded(
                 child: Column(
                   children: [
-                    _buildSelectedExerciseHeader(),
-                    if (selectedExercise != null) _buildSetSelector(provider),
+                    _buildSelectedHeader(),
+                    _buildSetSelector(provider),
                     Expanded(
                       child: _buildChart(provider, selectedExercise!, selectedSetIndex),
                     ),
@@ -119,27 +130,19 @@ class _GraphScreenState extends State<GraphScreen> {
     );
   }
 
+
+
   Widget _buildSearchBar(ExerciseProvider provider) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: "Search exercise (e.g., bench press, bicep curl)",
-          prefixIcon: const Icon(Icons.search, color: Colors.deepPurple),
+          hintText: "Search exercise (e.g., bench press)",
+          prefixIcon: const Icon(Icons.search),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
-            icon: const Icon(Icons.clear, color: Colors.grey),
+            icon: const Icon(Icons.clear),
             onPressed: () {
               _searchController.clear();
               setState(() {
@@ -150,24 +153,11 @@ class _GraphScreenState extends State<GraphScreen> {
             },
           )
               : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: const BorderSide(color: Colors.deepPurple),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: BorderSide(color: Colors.deepPurple.shade200),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
           filled: true,
-          fillColor: Colors.grey.shade50,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
-        onChanged: (value) => _searchExercise(value, provider),
-        onSubmitted: (value) {
+        onChanged: (v) => _searchExercise(v, provider),
+        onSubmitted: (v) {
           if (_searchResults.length == 1) {
             _selectExercise(_searchResults.first);
           }
@@ -176,48 +166,20 @@ class _GraphScreenState extends State<GraphScreen> {
     );
   }
 
+
+
   Widget _buildSearchResults() {
     return Expanded(
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         itemCount: _searchResults.length,
         itemBuilder: (context, index) {
-          final exerciseName = _searchResults[index];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.deepPurple.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.fitness_center,
-                  color: Colors.deepPurple,
-                ),
-              ),
-              title: Text(
-                exerciseName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
-              ),
-              subtitle: const Text(
-                "Tap to view progress",
-                style: TextStyle(fontSize: 12),
-              ),
-              trailing: const Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Colors.grey,
-              ),
-              onTap: () => _selectExercise(exerciseName),
-            ),
+          final name = _searchResults[index];
+          return ListTile(
+            leading: const Icon(Icons.fitness_center),
+            title: Text(name),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+            onTap: () => _selectExercise(name),
           );
         },
       ),
@@ -225,29 +187,12 @@ class _GraphScreenState extends State<GraphScreen> {
   }
 
   Widget _buildNoResults() {
-    return Expanded(
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off, size: 80, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            const Text(
-              "No exercises found",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "Try a different search term",
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-            ),
-          ],
-        ),
-      ),
+    return const Expanded(
+      child: Center(child: Text("No exercises found")),
     );
   }
 
-  Widget _buildWelcomeScreen() {
+  Widget _buildWelcome() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -299,17 +244,15 @@ class _GraphScreenState extends State<GraphScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.lightbulb_outline, color: Colors.deepPurple, size: 24),
+                  const Icon(Icons.info_outline, color: Colors.deepPurple, size: 20),
                   const SizedBox(width: 12),
-                  Flexible(
+                  Expanded(
                     child: Text(
-                      "Tip: Add weight & reps to track progress",
+                      "Complete workouts and use 'Finish' to track progress",
                       style: TextStyle(
-                        color: Colors.deepPurple.shade700,
-                        fontWeight: FontWeight.w500,
                         fontSize: 14,
+                        color: Colors.grey.shade700,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
                 ],
@@ -321,39 +264,30 @@ class _GraphScreenState extends State<GraphScreen> {
     );
   }
 
-  Widget _buildSelectedExerciseHeader() {
+
+
+  Widget _buildSelectedHeader() {
     return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.deepPurple.shade400, Colors.deepPurple.shade600],
-        ),
+        color: Colors.deepPurple,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  selectedExercise ?? "",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  "Weight (purple) & Reps (orange)",
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-              ],
+            child: Text(
+              selectedExercise ?? "",
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           IconButton(
+            icon: const Icon(Icons.close, color: Colors.white),
             onPressed: () {
               setState(() {
                 selectedExercise = null;
@@ -363,149 +297,112 @@ class _GraphScreenState extends State<GraphScreen> {
                 _isSearching = false;
               });
             },
-            icon: const Icon(Icons.close, color: Colors.white),
-            tooltip: "Clear selection",
-          ),
+          )
         ],
       ),
     );
   }
 
-  void _selectExercise(String exerciseName) {
+  void _selectExercise(String name) {
     setState(() {
-      selectedExercise = exerciseName;
+      selectedExercise = name;
       selectedSetIndex = 0;
       _isSearching = false;
       _searchResults = [];
     });
-
-    if (kDebugMode) {
-      debugPrint('Selected exercise: $exerciseName');
-    }
   }
+
 
   Widget _buildSetSelector(ExerciseProvider provider) {
     int maxSets = 0;
 
-    // Check regular weekly exercises
+    // Weekly
     for (var day in provider.days) {
-      final exercises = day.exercises;
-      final ex = exercises.where((e) => e.name == selectedExercise).toList();
-      if (ex.isNotEmpty) {
-        for (var exercise in ex) {
-          maxSets = exercise.sets.length > maxSets ? exercise.sets.length : maxSets;
-        }
+      for (var ex in day.exercises.where((e) => e.name == selectedExercise)) {
+        maxSets = ex.sets.length > maxSets ? ex.sets.length : maxSets;
       }
     }
 
-    // Check extra exercises
-    final allDates = provider.getAllExtraExerciseDates();
-    for (var date in allDates) {
-      final exercises = provider.getAllExercisesForDate(date);
-      final ex = exercises.where((e) => e.name == selectedExercise).toList();
-      if (ex.isNotEmpty) {
-        for (var exercise in ex) {
-          maxSets = exercise.sets.length > maxSets ? exercise.sets.length : maxSets;
-        }
+    // Extra
+    final extraDates = provider.getAllExtraExerciseDates();
+    for (var date in extraDates) {
+      for (var ex in provider
+          .getAllExercisesForDate(date)
+          .where((e) => e.name == selectedExercise)) {
+        maxSets = ex.sets.length > maxSets ? ex.sets.length : maxSets;
       }
     }
 
     if (maxSets <= 1) return const SizedBox.shrink();
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.deepPurple.withOpacity(0.2)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          const Icon(Icons.layers, color: Colors.deepPurple, size: 20),
-          const SizedBox(width: 12),
-          const Text(
-            "Select Set:",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: selectedSetIndex,
-                isExpanded: true,
-                icon: const Icon(Icons.arrow_drop_down, color: Colors.deepPurple),
-                items: List.generate(maxSets, (i) {
-                  return DropdownMenuItem(
-                    value: i,
-                    child: Text(
-                      "Set ${i + 1}",
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                  );
-                }),
-                onChanged: (value) {
-                  setState(() {
-                    selectedSetIndex = value!;
-                  });
-                },
-              ),
+          const Text("Set: "),
+          const SizedBox(width: 8),
+          DropdownButton<int>(
+            value: selectedSetIndex,
+            items: List.generate(
+              maxSets,
+                  (i) => DropdownMenuItem(value: i, child: Text("Set ${i + 1}")),
             ),
+            onChanged: (v) => setState(() => selectedSetIndex = v!),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildChart(ExerciseProvider provider, String exerciseName, int setIndex) {
-    final now = DateTime.now();
-    final start = now.subtract(const Duration(days: 60));
-    final Map<DateTime, Exercise?> byDate = {};
 
-    // Collect data for last 60 days
-    for (int i = 0; i <= 60; i++) {
-      final date = start.add(Duration(days: i));
-      final exercises = provider
-          .getAllExercisesForDate(date)
-          .where((e) => e.name == exerciseName)
-          .toList();
+  Widget _buildChart(
+      ExerciseProvider provider, String exerciseName, int setIndex) {
 
-      if (exercises.isNotEmpty) {
-        final ex = exercises.first;
+    final Map<DateTime, ExerciseSet> byDate = {};
+
+    // Weekly
+    for (var day in provider.days) {
+      for (var ex in day.exercises.where((e) => e.name == exerciseName)) {
         if (ex.sets.length > setIndex) {
-          // Only include if set has data
-          final set = ex.sets[setIndex];
-          if (set.weight.isNotEmpty || set.reps.isNotEmpty) {
-            byDate[date] = ex;
+          final s = ex.sets[setIndex];
+          if (s.weight.isNotEmpty || s.reps.isNotEmpty) {
+            byDate[ex.date] = s;
+          }
+        }
+      }
+    }
+
+    // Extra
+    final extraDates = provider.getAllExtraExerciseDates();
+    for (var date in extraDates) {
+      for (var ex in provider
+          .getAllExercisesForDate(date)
+          .where((e) => e.name == exerciseName)) {
+        if (ex.sets.length > setIndex) {
+          final s = ex.sets[setIndex];
+          if (s.weight.isNotEmpty || s.reps.isNotEmpty) {
+            byDate[date] = s;
+          }
+        }
+      }
+    }
+
+    // Workout logs (if exists)
+    final logDates = provider.getAllWorkoutLogDates();
+    for (var date in logDates) {
+      final logs = provider.getWorkoutLogsForDate(date);
+      for (var log in logs) {
+        for (var ex in log.exercises.where((e) => e.name == exerciseName)) {
+          if (ex.sets.length > setIndex) {
+            final s = ex.sets[setIndex];
+            byDate[date] = s; // workout logs already contain completed sets
           }
         }
       }
     }
 
     if (byDate.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.bar_chart, size: 80, color: Colors.grey.shade300),
-              const SizedBox(height: 16),
-              const Text(
-                "No data recorded yet",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "Add weight and reps to track progress",
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
+      return const Center(child: Text("No data yet"));
     }
 
     final dates = byDate.keys.toList()..sort();
@@ -513,8 +410,7 @@ class _GraphScreenState extends State<GraphScreen> {
     final List<FlSpot> repsSpots = [];
 
     for (int i = 0; i < dates.length; i++) {
-      final ex = byDate[dates[i]]!;
-      final s = ex.sets[setIndex];
+      final s = byDate[dates[i]]!;
       final weight = double.tryParse(s.weight) ?? 0;
       final reps = double.tryParse(s.reps) ?? 0;
 
@@ -524,7 +420,7 @@ class _GraphScreenState extends State<GraphScreen> {
 
     final maxY = [
       ...weightSpots.map((e) => e.y),
-      ...repsSpots.map((e) => e.y)
+      ...repsSpots.map((e) => e.y),
     ].reduce((a, b) => a > b ? a : b) * 1.2;
 
     final chartWidth = dates.length * 60.0;
@@ -632,13 +528,25 @@ class _GraphScreenState extends State<GraphScreen> {
                         fitInsideHorizontally: true,
                         fitInsideVertically: true,
                         getTooltipItems: (spots) {
-                          return spots.map((barSpot) {
-                            final idx = barSpot.x.toInt();
-                            final d = dates[idx];
+                          if (spots.isEmpty) return [];
+
+                          final idx = spots.first.x.toInt();
+                          final d = dates[idx];
+
+                          return spots.asMap().entries.map((entry) {
+                            final i = entry.key;
+                            final barSpot = entry.value;
+
                             final isWeight = barSpot.barIndex == 0;
                             final label = isWeight ? 'Weight' : 'Reps';
+
+
+                            final text = i == 0
+                                ? "${d.day}/${d.month}/${d.year}\n$label: ${barSpot.y.toStringAsFixed(1)}"
+                                : "$label: ${barSpot.y.toStringAsFixed(1)}";
+
                             return LineTooltipItem(
-                              "$label: ${barSpot.y.toStringAsFixed(1)}\n${d.day}/${d.month}/${d.year}",
+                              text,
                               const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -648,6 +556,7 @@ class _GraphScreenState extends State<GraphScreen> {
                           }).toList();
                         },
                       ),
+
                     ),
                     lineBarsData: [
                       LineChartBarData(

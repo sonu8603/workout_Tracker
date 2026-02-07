@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
-import '../Providers/Excercise_provider.dart';
-import '../models/individual_exercise_model.dart';
+import '../models/workout_log_model.dart';
 
-class HistoryExercisesScreen extends StatelessWidget {
+class HistoryDayDetailScreen extends StatelessWidget {
   final DateTime date;
-  final List<Exercise> exercises;
+  final List<WorkoutLog> logs;
 
-  const HistoryExercisesScreen({
+  const HistoryDayDetailScreen({
     super.key,
     required this.date,
-    required this.exercises,
+    required this.logs,
   });
 
-  String _getFormattedDate(DateTime date) {
-    final weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final months = [
+  String _formatDate(DateTime date) {
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
@@ -23,75 +22,56 @@ class HistoryExercisesScreen extends StatelessWidget {
         '${months[date.month - 1]} ${date.year}';
   }
 
-  int _getTotalSets() {
-    return exercises.fold(0, (sum, ex) => sum + ex.sets.length);
-  }
-
   @override
   Widget build(BuildContext context) {
+    //  Flatten all exercises of the day
+    final allExercises = logs.expand((log) => log.exercises).toList();
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(_getFormattedDate(date)),
+        title: Text(_formatDate(date)),
         backgroundColor: Colors.deepPurple,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 23),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: ListView(
+      body: ListView.builder(
         padding: const EdgeInsets.all(16),
-        children: [
-          // Summary section
-          Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.deepPurple.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              '${exercises.length} Exercises | ${_getTotalSets()} Sets',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.deepPurple,
-                fontSize: 15,
-              ),
-            ),
-          ),
-
-          // Expandable exercise list
-          ...exercises.map((exercise) {
-            return ExpandableExerciseTile(exercise: exercise);
-          }),
-        ],
+        itemCount: allExercises.length,
+        itemBuilder: (context, index) {
+          return ExerciseCard(exercise: allExercises[index]);
+        },
       ),
     );
   }
 }
 
-// 🟣 Expandable exercise tile
-class ExpandableExerciseTile extends StatefulWidget {
-  final Exercise exercise;
+class ExerciseCard extends StatefulWidget {
+  final CompletedExercise exercise;
 
-  const ExpandableExerciseTile({super.key, required this.exercise});
+  const ExerciseCard({super.key, required this.exercise});
 
   @override
-  State<ExpandableExerciseTile> createState() => _ExpandableExerciseTileState();
+  State<ExerciseCard> createState() => _ExerciseCardState();
 }
 
-class _ExpandableExerciseTileState extends State<ExpandableExerciseTile> {
-  bool _isExpanded = false;
+class _ExerciseCardState extends State<ExerciseCard> {
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
-    final exercise = widget.exercise;
+    final ex = widget.exercise;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
-          // Header row (clickable)
           InkWell(
             borderRadius: BorderRadius.circular(12),
-            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            onTap: () => setState(() => _expanded = !_expanded),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
@@ -100,123 +80,59 @@ class _ExpandableExerciseTileState extends State<ExpandableExerciseTile> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      exercise.name,
+                      ex.name,
                       style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                          fontSize: 16, fontWeight: FontWeight.w600),
                     ),
                   ),
                   AnimatedRotation(
-                    turns: _isExpanded ? 0.5 : 0.0, // rotate arrow 180°
+                    turns: _expanded ? 0.5 : 0.0,
                     duration: const Duration(milliseconds: 200),
                     child: const Icon(Icons.keyboard_arrow_down,
-                        color: Colors.deepPurple, size: 26),
+                        color: Colors.deepPurple),
                   ),
                 ],
               ),
             ),
           ),
-
-          // Expanded content
           AnimatedCrossFade(
             duration: const Duration(milliseconds: 250),
-            firstChild: const SizedBox.shrink(),
-            secondChild: _buildSetDetails(exercise),
-            crossFadeState: _isExpanded
+            crossFadeState: _expanded
                 ? CrossFadeState.showSecond
                 : CrossFadeState.showFirst,
+            firstChild: const SizedBox.shrink(),
+            secondChild: _buildSets(ex),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSetDetails(Exercise exercise) {
+  Widget _buildSets(CompletedExercise ex) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[300]!),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            // Header row
-            Container(
-              padding:
-              const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(8),
-                  topRight: Radius.circular(8),
-                ),
-              ),
-              child: const Row(
-                children: [
-                  Expanded(
-                    flex: 1,
-                    child: Text('Set',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 13)),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Text('Weight (kg)',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 13)),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Text('Reps',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 13)),
-                  ),
-                ],
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        children: ex.completedSets.asMap().entries.map((entry) {
+          final i = entry.key;
+          final set = entry.value;
+          return Container(
+            padding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: i.isEven ? Colors.white : Colors.grey[50],
+              border: Border(
+                top: BorderSide(color: Colors.grey[300]!),
               ),
             ),
-
-            // Set rows
-            ...exercise.sets.asMap().entries.map((entry) {
-              final index = entry.key;
-              final set = entry.value;
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                    vertical: 10, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: index.isEven ? Colors.white : Colors.grey[50],
-                  border: Border(
-                    top: BorderSide(color: Colors.grey[300]!),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: Text('${set.setNumber}',
-                          style: const TextStyle(fontSize: 14)),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        set.weight.isEmpty ? '-' : set.weight,
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        set.reps.isEmpty ? '-' : set.reps,
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ],
-        ),
+            child: Row(
+              children: [
+                Expanded(child: Text('Set ${i + 1}')),
+                Expanded(child: Text(set.weight)),
+                Expanded(child: Text(set.reps)),
+              ],
+            ),
+          );
+        }).toList(),
       ),
     );
   }

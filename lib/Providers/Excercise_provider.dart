@@ -5,11 +5,13 @@ import 'package:workout_tracker/models/individual_set.dart';
 import 'package:workout_tracker/models/individual_exercise_model.dart';
 import '../models/workout_day.dart';
 
+import 'package:workout_tracker/models/workout_log_model.dart';
 
 class HiveConfig {
   static const String workoutDaysBox = 'workout_days';
   static const String extraExercisesBox = 'extra_exercises';
   static const String settingsBox = 'settings';
+  static const String workoutLogsBox = 'workout_logs';
 }
 
 class ExerciseProvider with ChangeNotifier {
@@ -19,6 +21,7 @@ class ExerciseProvider with ChangeNotifier {
   late Box<WorkoutDay> _daysBox;
   late Box _extraBox;
   late Box _settingsBox;
+  late Box<WorkoutLog> _workoutLogsBox;
 
   List<WorkoutDay> _days = [];
   Map<DateTime, List<Exercise>> _extraExercises = {};
@@ -65,6 +68,8 @@ class ExerciseProvider with ChangeNotifier {
       _daysBox = Hive.box<WorkoutDay>(HiveConfig.workoutDaysBox);
       _extraBox = Hive.box(HiveConfig.extraExercisesBox);
       _settingsBox = Hive.box(HiveConfig.settingsBox);
+      _workoutLogsBox = Hive.box<WorkoutLog>(HiveConfig.workoutLogsBox);
+      if (kDebugMode) debugPrint(' Workout logs: ${_workoutLogsBox.length}');
 
       if (kDebugMode) {
         debugPrint('📦 Loading data from Hive...');
@@ -527,10 +532,10 @@ class ExerciseProvider with ChangeNotifier {
       return success;
     } catch (e) {
       _lastError = 'Error adding exercise to day: $e';
-      if (kDebugMode) {
-        debugPrint('❌ Exception in addExerciseToDay: $e');
-        debugPrint('❌ Stack trace: ${StackTrace.current}');
-      }
+      // if (kDebugMode) {
+      //   debugPrint('❌ Exception in addExerciseToDay: $e');
+      //   debugPrint('❌ Stack trace: ${StackTrace.current}');
+      // }
       return false;
     }
   }
@@ -539,11 +544,10 @@ class ExerciseProvider with ChangeNotifier {
     try {
       final day = _days.firstWhere((d) => d.name == dayName);
       return day.exercises.where((ex) {
-        return ex.date.year != 2000; // Don't show template exercises in history
+        return ex.date.year != 2000;
       }).toList();
 
-      // OR return all if you want to show them in routine view
-      return List<Exercise>.from(day.exercises);
+
     } catch (e) {
       _lastError = 'Day not found: $dayName';
       return [];
@@ -593,9 +597,7 @@ class ExerciseProvider with ChangeNotifier {
           ExerciseSet(setNumber: exercises[exerciseIndex].sets.length + 1));
 
       final success = await _saveDays();
-      if (success) {
-        notifyListeners();
-      }
+      if (success) notifyListeners();
       return success;
     } catch (e) {
       _lastError = 'Error adding set to day exercise: $e';
@@ -622,9 +624,7 @@ class ExerciseProvider with ChangeNotifier {
       exercises[exerciseIndex].sets.removeLast();
 
       final success = await _saveDays();
-      if (success) {
-        notifyListeners();
-      }
+      if (success) notifyListeners();
       return success;
     } catch (e) {
       _lastError = 'Error removing set from day exercise: $e';
@@ -632,6 +632,7 @@ class ExerciseProvider with ChangeNotifier {
       return false;
     }
   }
+
 
   Future<bool> updateExerciseName(String dayName, int exerciseIndex, String newName) async {
     try {
@@ -872,8 +873,203 @@ class ExerciseProvider with ChangeNotifier {
     return names;
   }
 
+  // ================= WORKOUT LOGGING METHODS =================
 
-  @override
+  Future<bool> saveWorkoutLog({
+    required DateTime date,
+    required String dayName,
+    required List<Exercise> exercises,
+    String? notes,
+  }) async {
+    try {
+      final todayKey = _dateToString(date);
+
+      //  Get existing logs of today
+      final existingLogs = _workoutLogsBox.values
+          .where((log) => _dateToString(log.date) == todayKey)
+          .toList();
+
+      //  Collect already saved exercise IDs
+      final alreadySavedIds = <String>{};
+      for (var log in existingLogs) {
+        for (var ex in log.exercises) {
+          alreadySavedIds.add(ex.exerciseId);
+        }
+      }
+
+      final completedExercises = <CompletedExercise>[];
+
+      for (var ex in exercises) {
+        //  DEEP COPY of completed sets
+        final completedSets = ex.sets
+            .where((s) => _isSetCompleted(s))
+            .map((s) => ExerciseSet(
+          setNumber: s.setNumber,
+          weight: s.weight,
+          reps: s.reps,
+        ))
+            .toList();
+
+        //  Skip if no completed sets or already saved
+        if (completedSets.isEmpty || alreadySavedIds.contains(ex.id)) continue;
+
+        completedExercises.add(
+          CompletedExercise(
+            exerciseId: ex.id,
+            name: ex.name,
+            sets: completedSets,
+            completedAt: DateTime.now(),
+          ),
+        );
+      }
+
+      if (completedExercises.isEmpty) {
+        _lastError = 'No new completed exercises to save';
+        return false;
+      }
+
+      final now = DateTime.now();
+      final key =
+          '${todayKey}_${now.hour}${now.minute}${now.second}${now.millisecond}';
+
+      final log = WorkoutLog(
+        date: DateTime(date.year, date.month, date.day),
+        dayName: dayName,
+        exercises: completedExercises,
+        startedAt: now,
+        completedAt: now,
+        notes: notes,
+      );
+
+      await _workoutLogsBox.put(key, log);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _lastError = 'Error saving workout log: $e';
+      return false;
+    }
+  }
+
+
+
+  bool _isSetCompleted(ExerciseSet set) {
+    if (set.weight.isEmpty || set.reps.isEmpty) return false;
+    final weight = double.tryParse(set.weight);
+    final reps = int.tryParse(set.reps);
+    return weight != null && reps != null && weight > 0 && reps > 0;
+  }
+
+  List<WorkoutLog> getWorkoutLogsForDate(DateTime date) {
+    final dateStr = _dateToString(date);
+    return _workoutLogsBox.values
+        .where((log) => _dateToString(log.date) == dateStr)
+        .toList()
+      ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+  }
+
+  List<DateTime> getAllWorkoutLogDates() {
+    final dates = <DateTime>{};
+
+    for (var log in _workoutLogsBox.values) {
+      dates.add(DateTime(log.date.year, log.date.month, log.date.day));
+    }
+
+    return dates.toList()..sort((a, b) => b.compareTo(a));
+  }
+
+  List<CompletedExercise> getExerciseHistory(String exerciseId) {
+    final history = <CompletedExercise>[];
+
+    for (var log in _workoutLogsBox.values) {
+      for (var exercise in log.exercises) {
+        if (exercise.exerciseId == exerciseId) {
+          history.add(exercise);
+        }
+      }
+    }
+
+    history.sort((a, b) => b.completedAt.compareTo(a.completedAt));
+    return history;
+  }
+
+  int get totalWorkoutLogs => _workoutLogsBox.length;
+
+  int getWorkoutStreak() {
+    final dates = getAllWorkoutLogDates();
+    if (dates.isEmpty) return 0;
+
+    int streak = 0;
+    DateTime checkDate = DateTime.now();
+    final today = DateTime(checkDate.year, checkDate.month, checkDate.day);
+
+    for (var date in dates) {
+      final normalizedDate = DateTime(date.year, date.month, date.day);
+      final difference = today.difference(normalizedDate).inDays;
+
+      if (difference == streak) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    return streak;
+  }
+       //  reset exercises section
+
+  Future<bool> resetDayExercises(String dayName) async {
+    try {
+      final day = _days.firstWhere((d) => d.name == dayName);
+
+      for (var exercise in day.exercises) {
+        for (var set in exercise.sets) {
+          set.weight = '';
+          set.reps = '';
+        }
+      }
+
+      final success = await _saveDays();
+      if (success) {
+        if (kDebugMode) debugPrint('✅ Reset exercises for $dayName');
+        notifyListeners();
+      }
+      return success;
+    } catch (e) {
+      _lastError = 'Error resetting exercises: $e';
+      if (kDebugMode) debugPrint(' $_lastError');
+      return false;
+    }
+  }
+
+  Future<bool> resetExtraExercises(DateTime date) async {
+    try {
+      final key = DateTime(date.year, date.month, date.day);
+      final exercises = _extraExercises[key];
+
+      if (exercises == null) return true;
+
+      for (var exercise in exercises) {
+        for (var set in exercise.sets) {
+          set.weight = '';
+          set.reps = '';
+        }
+      }
+
+      final success = await _saveExtraExercises(key);
+      if (success) {
+        if (kDebugMode) debugPrint('✅ Reset extra exercises for $key');
+        notifyListeners();
+      }
+      return success;
+    } catch (e) {
+      _lastError = 'Error resetting extra exercises: $e';
+      if (kDebugMode) debugPrint(' $_lastError');
+      return false;
+    }
+  }
+
+
+
   void dispose() {
     // Don't close boxes here - they might be used elsewhere
     super.dispose();

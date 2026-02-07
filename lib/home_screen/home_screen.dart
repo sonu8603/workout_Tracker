@@ -31,14 +31,14 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text("Workout at $todayName"),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.deepPurple[500],
         leading: IconButton(
           icon: const Icon(Icons.menu),
           onPressed: () => showLeftPanel(context),
         ),
       ),
 
-      //  If today is rest day
+      // If today is rest day
       body: isRestDay
           ? Center(
         child: Column(
@@ -63,15 +63,16 @@ class HomeScreen extends StatelessWidget {
         ),
       )
 
-      //  If not rest day → show exercises normally
+      // If not rest day → show exercises normally
           : !hasExercises
           ? Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text("No exercises added for $todayName"
-              ,style: TextStyle(fontSize: 15,fontWeight: FontWeight.w500),
-
+            Text(
+              "No exercises added for $todayName",
+              style: const TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 10),
             ElevatedButton.icon(
@@ -79,7 +80,8 @@ class HomeScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AddExerciseScreen(day: todayName),
+                    builder: (context) =>
+                        AddExerciseScreen(day: todayName),
                   ),
                 );
               },
@@ -90,7 +92,8 @@ class HomeScreen extends StatelessWidget {
                 foregroundColor: Colors.white,
                 elevation: 6,
                 shadowColor: Colors.deepPurpleAccent,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 24, vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -101,7 +104,6 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-
           ],
         ),
       )
@@ -120,10 +122,11 @@ class HomeScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => RegularExerciseScreen(
-                          dayName: todayName,
-                          exerciseIndex: null,
-                        ),
+                        builder: (context) =>
+                            RegularExerciseScreen(
+                              dayName: todayName,
+                              exerciseIndex: null,
+                            ),
                       ),
                     );
                   },
@@ -133,7 +136,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             ...regularExercises.asMap().entries.map((entry) {
-              return ExpandableExerciseCard(
+              return ExerciseCard(
                 exercise: entry.value,
                 keyId: todayName,
                 exerciseIndex: entry.key,
@@ -169,19 +172,21 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             ...extraExercisesDetailed.asMap().entries.map((entry) {
-              return ExpandableExerciseCard(
+              return ExerciseCard(
                 exercise: entry.value,
                 keyId: todayDate.toString(),
                 exerciseIndex: entry.key,
                 isRegular: false,
+
               );
+
             }).toList(),
           ],
         ],
       ),
 
       floatingActionButton: isRestDay
-          ? null // 💤 No button if rest day
+          ? null
           : regularExercises.isNotEmpty
           ? FloatingActionButton(
         onPressed: () => showAddExerciseDialog(context, todayDate),
