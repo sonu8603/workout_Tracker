@@ -255,18 +255,28 @@ class ApiService {
     }
   }
 
+
+
+  /// OTP-based Reset Password
   static Future<Map<String, dynamic>> resetPassword({
-    required String resetToken,
+    required String email,
+    required String otp,
     required String newPassword,
   }) async {
     try {
-      if (kDebugMode) debugPrint('🔵 Resetting password');
+      if (kDebugMode) debugPrint('🔵 Resetting password with OTP');
 
-      final response = await http.put(
-        Uri.parse('${ApiConfig.baseUrl}/auth/reset-password/$resetToken'),
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/auth/reset-password'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'newPassword': newPassword}),
+        body: json.encode({
+          'email': email,
+          'otp': otp,
+          'newPassword': newPassword,
+        }),
       ).timeout(const Duration(seconds: 15));
+
+      if (kDebugMode) debugPrint('📥 Status: ${response.statusCode}');
 
       final data = json.decode(response.body);
 
@@ -279,12 +289,18 @@ class ApiService {
         return {
           'success': false,
           'message': data['message'] ?? 'Failed to reset password',
+          'code': data['code'],
         };
       }
     } on TimeoutException {
       return {
         'success': false,
         'message': 'Connection timeout. Please try again.',
+      };
+    } on http.ClientException {
+      return {
+        'success': false,
+        'message': 'Cannot connect to server. Please check your internet connection.',
       };
     } catch (e) {
       if (kDebugMode) debugPrint('🔴 Error: $e');
@@ -293,6 +309,13 @@ class ApiService {
         'message': 'Network error. Please try again.',
       };
     }
+  }
+
+  /// 🆕 Resend OTP (just calls forgotPassword again)
+  static Future<Map<String, dynamic>> resendOTP({
+    required String email,
+  }) async {
+    return forgotPassword(email: email);
   }
 
   static Future<Map<String, dynamic>> getProfile() async {

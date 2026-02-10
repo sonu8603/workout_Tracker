@@ -275,7 +275,7 @@ class AuthProvider extends ChangeNotifier {
       }
 
       if (result['success'] == true) {
-        // 🔥 Clear lock info on successful login
+        //  Clear lock info on successful login
         _isLocked = false;
         _remainingSeconds = 0;
         _lockUntil = null;
