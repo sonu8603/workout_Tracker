@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:hive/hive.dart';
@@ -21,7 +22,7 @@ class ApiService {
 
   static Future<void> removeToken() async {
     await _authBox.delete('auth_token');
-    if (kDebugMode) debugPrint('🔑 Token removed');
+    if (kDebugMode) debugPrint('🔓 Token removed');
   }
 
   // ============== USER DATA MANAGEMENT ==============
@@ -84,13 +85,20 @@ class ApiService {
           'message': data['message'] ?? 'Registration failed',
         };
       }
+    } on TimeoutException {
+      if (kDebugMode) debugPrint('⏱️ Request timeout');
+      return {
+        'success': false,
+        'message': 'Connection timeout. Please try again.',
+      };
     } on http.ClientException {
+      if (kDebugMode) debugPrint('🌐 Network error - no connection');
       return {
         'success': false,
         'message': 'Cannot connect to server. Please check your internet connection.',
       };
     } catch (e) {
-      if (kDebugMode) debugPrint('❌ Error: $e');
+      if (kDebugMode) debugPrint('🔴 Error: $e');
       return {
         'success': false,
         'message': 'Network error. Please try again.',
@@ -98,6 +106,7 @@ class ApiService {
     }
   }
 
+  // 🔥 PRODUCTION-READY LOGIN METHOD
   static Future<Map<String, dynamic>> login({
     required String identifier,
     required String password,
@@ -114,26 +123,77 @@ class ApiService {
         }),
       ).timeout(const Duration(seconds: 15));
 
-      if (kDebugMode) debugPrint('📥 Status: ${response.statusCode}');
+      if (kDebugMode) {
+        debugPrint('📥 Status: ${response.statusCode}');
+        debugPrint('📥 Response: ${response.body}');
+      }
 
       final data = json.decode(response.body);
 
+      // 🔥 PRODUCTION: Handle 423 Locked OR 429 Rate Limited
+      if (response.statusCode == 423 || response.statusCode == 429) {
+        if (data['lockUntil'] == null || data['remainingSeconds'] == null) {
+          return {
+            'success': false,
+            'code': 'ACCOUNT_LOCKED',
+            'message': data['message'] ?? 'Too many login attempts. Please try again later.',
+          };
+        }
+
+        final int lockUntil = data['lockUntil'];
+        final int remainingSeconds = data['remainingSeconds'];
+
+        if (kDebugMode) {
+          debugPrint('🔒 Using server lock info:');
+          debugPrint('   - Until: ${DateTime.fromMillisecondsSinceEpoch(lockUntil)}');
+          debugPrint('   - Remaining: $remainingSeconds sec');
+        }
+
+        return {
+          'success': false,
+          'code': 'ACCOUNT_LOCKED',
+          'message': data['message'],
+          'lockUntil': lockUntil,
+          'remainingSeconds': remainingSeconds,
+          'remainingMinutes': data['remainingMinutes'] ?? (remainingSeconds / 60).ceil(),
+        };
+      }
+
+
+      // Handle successful login
       if (response.statusCode == 200) {
         await saveToken(data['token']);
         await saveUserData(data['user']);
+        if (kDebugMode) debugPrint('✅ Login successful');
+
         return {
           'success': true,
           'message': data['message'],
           'token': data['token'],
           'user': data['user'],
         };
-      } else {
-        return {
-          'success': false,
-          'message': data['message'] ?? 'Login failed',
-        };
       }
+
+      // Handle other errors (401, 400, etc.)
+      if (kDebugMode) {
+        debugPrint('❌ Login failed: ${data['message']}');
+      }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Login failed',
+        'code': data['code'],
+        'attemptsLeft': data['attemptsLeft'],
+      };
+
+    } on TimeoutException {
+      if (kDebugMode) debugPrint('⏱️ Request timeout');
+      return {
+        'success': false,
+        'message': 'Connection timeout. Please try again.',
+      };
     } on http.ClientException {
+      if (kDebugMode) debugPrint('🌐 Network error - no connection');
       return {
         'success': false,
         'message': 'Cannot connect to server. Please check your internet connection.',
@@ -174,6 +234,18 @@ class ApiService {
           'message': data['message'] ?? 'Failed to send reset email',
         };
       }
+    } on TimeoutException {
+      if (kDebugMode) debugPrint('⏱️ Request timeout');
+      return {
+        'success': false,
+        'message': 'Connection timeout. Please try again.',
+      };
+    } on http.ClientException {
+      if (kDebugMode) debugPrint('🌐 Network error');
+      return {
+        'success': false,
+        'message': 'Cannot connect to server. Please check your internet connection.',
+      };
     } catch (e) {
       if (kDebugMode) debugPrint('🔴 Error: $e');
       return {
@@ -188,7 +260,7 @@ class ApiService {
     required String newPassword,
   }) async {
     try {
-      if (kDebugMode) debugPrint('🔵 Resetting password with token');
+      if (kDebugMode) debugPrint('🔵 Resetting password');
 
       final response = await http.put(
         Uri.parse('${ApiConfig.baseUrl}/auth/reset-password/$resetToken'),
@@ -209,6 +281,11 @@ class ApiService {
           'message': data['message'] ?? 'Failed to reset password',
         };
       }
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Connection timeout. Please try again.',
+      };
     } catch (e) {
       if (kDebugMode) debugPrint('🔴 Error: $e');
       return {
@@ -228,7 +305,7 @@ class ApiService {
         };
       }
 
-      if (kDebugMode) debugPrint('🔵 Fetching profile from: ${ApiConfig.baseUrl}/auth/me');
+      if (kDebugMode) debugPrint('🔵 Fetching profile');
 
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/auth/me'),
@@ -238,10 +315,7 @@ class ApiService {
         },
       ).timeout(const Duration(seconds: 10));
 
-      if (kDebugMode) {
-        debugPrint('🔥 Profile Status: ${response.statusCode}');
-        debugPrint('🔥 Profile Body: ${response.body}');
-      }
+      if (kDebugMode) debugPrint('📥 Profile Status: ${response.statusCode}');
 
       final data = json.decode(response.body);
 
@@ -269,9 +343,10 @@ class ApiService {
     } catch (e) {
       if (kDebugMode) debugPrint('🔴 Profile fetch error: $e');
 
+      // Return cached data if available
       final cachedData = getUserData();
       if (cachedData != null) {
-        if (kDebugMode) debugPrint('📦 Returning cached user data');
+        if (kDebugMode) debugPrint('📦 Returning cached data');
         return {
           'success': true,
           ...cachedData,
@@ -336,7 +411,13 @@ class ApiService {
           'message': data['message'] ?? 'Failed to update profile',
         };
       }
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Connection timeout. Please try again.',
+      };
     } catch (e) {
+      if (kDebugMode) debugPrint('🔴 Error: $e');
       return {
         'success': false,
         'message': 'Network error',
@@ -380,8 +461,13 @@ class ApiService {
           'message': data['message'] ?? 'Failed to update profile image',
         };
       }
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Connection timeout. Please try again.',
+      };
     } catch (e) {
-      if (kDebugMode) debugPrint('🔴 Profile image error: $e');
+      if (kDebugMode) debugPrint('🔴 Error: $e');
       return {
         'success': false,
         'message': 'Network error',

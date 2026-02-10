@@ -9,5 +9,5 @@ class ApiConfig {
 
   static String get baseUrl => isProd
       ? "https://yourapp.onrender.com/api"
-      : "http://172.16.100.194:3000/api";
+      : "http://10.247.30.156:5000/api";
 }

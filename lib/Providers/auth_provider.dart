@@ -1,9 +1,8 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../services/api_service.dart';
 import '../main.dart'; // for HiveConfig
-
-
 
 class AuthProvider extends ChangeNotifier {
   final Box _authBox = Hive.box(HiveConfig.authBox);
@@ -13,6 +12,12 @@ class AuthProvider extends ChangeNotifier {
   Map<String, dynamic>? _user;
   String? _token;
   String? _error;
+
+  // 🆕 Lock-related properties
+  bool _isLocked = false;
+  int _remainingSeconds = 0;
+  DateTime? _lockUntil;
+  Timer? _lockTimer; // 🔥 Timer instance
 
   // ================= GETTERS =================
 
@@ -27,10 +32,33 @@ class AuthProvider extends ChangeNotifier {
   String? get email => _user?['email'];
   String? get phone => _user?['phone'];
 
+  // 🆕 Lock getters
+  bool get isLocked => _isLocked;
+  int get remainingSeconds => _remainingSeconds;
+
+  String get remainingTime {
+    if (_remainingSeconds <= 0) return '';
+
+    final minutes = (_remainingSeconds / 60).floor();
+    final seconds = _remainingSeconds % 60;
+
+    if (minutes > 0) {
+      return '$minutes min ${seconds.toString().padLeft(2, '0')} sec';
+    } else {
+      return '$seconds sec';
+    }
+  }
+
   // ================= INIT =================
 
   AuthProvider() {
     _restoreAuthState();
+  }
+
+  @override
+  void dispose() {
+    _lockTimer?.cancel(); // 🔥 Cancel timer on dispose
+    super.dispose();
   }
 
   // ================= CORE HELPERS =================
@@ -59,6 +87,16 @@ class AuthProvider extends ChangeNotifier {
         }
       } else {
         _isLoggedIn = false;
+      }
+
+      // 🆕 Restore lock info
+      final lockUntilMs = _authBox.get('lockUntil');
+      if (lockUntilMs != null) {
+        _lockUntil = DateTime.fromMillisecondsSinceEpoch(lockUntilMs);
+        _updateLockStatus();
+        if (_isLocked) {
+          _startLockTimer(); // 🔥 Restart timer if still locked
+        }
       }
     } catch (e) {
       if (kDebugMode) {
@@ -94,6 +132,91 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 🔥 FIXED: Update lock status
+  void _updateLockStatus() {
+    if (_lockUntil == null) {
+      _isLocked = false;
+      _remainingSeconds = 0;
+      return;
+    }
+
+    final now = DateTime.now();
+    if (now.isAfter(_lockUntil!) || now.isAtSameMomentAs(_lockUntil!)) {
+      // Lock expired
+      if (kDebugMode) debugPrint('🔓 Lock expired');
+      _isLocked = false;
+      _remainingSeconds = 0;
+      _lockUntil = null;
+      _lockTimer?.cancel();
+      _lockTimer = null;
+      _clearLockFromStorage();
+      notifyListeners();
+    } else {
+      // Still locked - calculate remaining time
+      _isLocked = true;
+      _remainingSeconds = _lockUntil!.difference(now).inSeconds;
+
+      if (kDebugMode) debugPrint('🔒 Lock remaining: $_remainingSeconds seconds');
+
+      // Don't call notifyListeners here, let the timer handle it
+    }
+  }
+
+  // 🔥 FIXED: Start lock countdown timer
+  void _startLockTimer() {
+    // Cancel existing timer if any
+    _lockTimer?.cancel();
+
+    if (_lockUntil == null) return;
+
+    if (kDebugMode) debugPrint('⏰ Starting lock timer');
+
+    // 🔥 Use periodic timer to update every second
+    _lockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_lockUntil == null) {
+        timer.cancel();
+        return;
+      }
+
+      final now = DateTime.now();
+
+      if (now.isAfter(_lockUntil!) || now.isAtSameMomentAs(_lockUntil!)) {
+        // Lock expired
+        if (kDebugMode) debugPrint('🔓 Timer: Lock expired');
+        _isLocked = false;
+        _remainingSeconds = 0;
+        _lockUntil = null;
+        _clearLockFromStorage();
+        timer.cancel();
+        _lockTimer = null;
+        notifyListeners(); // 🔥 Notify when lock expires
+      } else {
+        // Update remaining time
+        _remainingSeconds = _lockUntil!.difference(now).inSeconds;
+
+        if (kDebugMode && _remainingSeconds % 10 == 0) {
+          debugPrint('⏰ Timer update: $_remainingSeconds seconds remaining');
+        }
+
+        notifyListeners(); // 🔥 Notify every second to update UI
+      }
+    });
+  }
+
+  // 🆕 Save lock info to storage
+  Future<void> _saveLockToStorage() async {
+    if (_lockUntil != null) {
+      await _authBox.put('lockUntil', _lockUntil!.millisecondsSinceEpoch);
+      if (kDebugMode) debugPrint('💾 Saved lock until: $_lockUntil');
+    }
+  }
+
+  // 🆕 Clear lock info from storage
+  Future<void> _clearLockFromStorage() async {
+    await _authBox.delete('lockUntil');
+    if (kDebugMode) debugPrint('🗑️ Cleared lock from storage');
+  }
+
   Future<bool> _authWrapper(Future<Map<String, dynamic>> Function() action) async {
     _setLoading(true);
     _clearError();
@@ -120,18 +243,60 @@ class AuthProvider extends ChangeNotifier {
 
   /// Login with email or username
   Future<bool> login(String identifier, String password) async {
-    return _authWrapper(() async {
+    _setLoading(true);
+    _clearError();
+
+    try {
       final result = await ApiService.login(
         identifier: identifier,
         password: password,
       );
 
-      if (result['success'] == true) {
-        await _persistAuthState(result['token'], result['user']);
+      if (kDebugMode) debugPrint('📥 Login result: $result');
+
+      // 🔥 Handle account locked
+      if (result['code'] == 'ACCOUNT_LOCKED' || (result['success'] == false && result['lockUntil'] != null)) {
+        _isLocked = true;
+        _remainingSeconds = result['remainingSeconds'] ?? 0;
+
+        if (result['lockUntil'] != null) {
+          _lockUntil = DateTime.fromMillisecondsSinceEpoch(result['lockUntil']);
+          await _saveLockToStorage();
+          _startLockTimer();
+          if (kDebugMode) {
+            debugPrint('🔒 Account locked until: $_lockUntil');
+            debugPrint('🔒 Remaining: $_remainingSeconds seconds');
+          }
+        }
+
+        _error = result['message'] ?? 'Account is locked';
+        _setLoading(false);
+        return false;
       }
 
-      return result;
-    });
+      if (result['success'] == true) {
+        // 🔥 Clear lock info on successful login
+        _isLocked = false;
+        _remainingSeconds = 0;
+        _lockUntil = null;
+        _lockTimer?.cancel();
+        _lockTimer = null;
+        await _clearLockFromStorage();
+
+        await _persistAuthState(result['token'], result['user']);
+        _setLoading(false);
+        return true;
+      } else {
+        _error = result['message'] ?? 'Login failed';
+        _setLoading(false);
+        return false;
+      }
+    } catch (e) {
+      _error = 'Network error. Please try again.';
+      if (kDebugMode) debugPrint('Login error: $e');
+      _setLoading(false);
+      return false;
+    }
   }
 
   /// Register new user
@@ -160,6 +325,15 @@ class AuthProvider extends ChangeNotifier {
   /// Logout
   Future<void> logout() async {
     await ApiService.logout();
+
+    // 🔥 Clear lock info on logout
+    _isLocked = false;
+    _remainingSeconds = 0;
+    _lockUntil = null;
+    _lockTimer?.cancel();
+    _lockTimer = null;
+    await _clearLockFromStorage();
+
     await _clearAuthState();
 
     if (kDebugMode) {
@@ -207,11 +381,6 @@ class AuthProvider extends ChangeNotifier {
       if (kDebugMode) debugPrint('Refresh profile failed: $e');
     }
   }
-
-  // getuserimage
-
-
-
 
   void clearError() {
     _error = null;

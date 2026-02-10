@@ -88,7 +88,10 @@ class _LogInScreenState extends State<LogInScreen>
         MaterialPageRoute(builder: (context) => const NavigationRoutePage()),
       );
     } else {
-      _showError(authProvider.error ?? 'Login failed');
+      // Error handling - don't show snackbar for locked accounts (already shown in UI)
+      if (!authProvider.isLocked && authProvider.error != null) {
+        _showError(authProvider.error!);
+      }
     }
   }
 
@@ -182,21 +185,126 @@ class _LogInScreenState extends State<LogInScreen>
 
                   const SizedBox(height: 30),
 
+                  // 🆕 Account Locked Warning Banner
+                  Consumer<AuthProvider>(
+                    builder: (context, auth, child) {
+                      if (!auth.isLocked) return const SizedBox.shrink();
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 20),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.red.shade50,
+                              Colors.red.shade100.withOpacity(0.5),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.red.shade300, width: 1.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade100,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.lock_clock,
+                                    color: Colors.red.shade700,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Account Locked',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red.shade800,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Too many failed attempts',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.red.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.red.shade200),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.timer_outlined, color: Colors.red.shade700, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Unlocks in: ',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.red.shade900,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Text(
+                                    auth.remainingTime,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red.shade700,
+                                      fontFamily: 'monospace',
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+
                   // Email Field
                   _buildModernTextField(
                     controller: _emailController,
-                    label: "Email/username",
+                    label: "Email/Username",
                     hint: "Enter email or username",
                     icon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (value == null || value.trim().isEmpty) {
                         return 'Please enter email or username';
                       }
-
                       return null;
                     },
                   ),
@@ -208,7 +316,7 @@ class _LogInScreenState extends State<LogInScreen>
 
                   const SizedBox(height: 12),
 
-                  // 🆕 Forgot Password Link
+                  // Forgot Password Link
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -241,7 +349,7 @@ class _LogInScreenState extends State<LogInScreen>
                   // Login Button
                   Consumer<AuthProvider>(
                     builder: (context, auth, child) {
-                      return _buildModernButton(auth.isLoading);
+                      return _buildModernButton(auth.isLoading, auth.isLocked);
                     },
                   ),
 
@@ -262,20 +370,6 @@ class _LogInScreenState extends State<LogInScreen>
                         ),
                       ),
                       Expanded(child: Divider(color: Colors.grey.shade300)),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Social Buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildSocialButton(Icons.g_mobiledata, Colors.red),
-                      const SizedBox(width: 16),
-                      _buildSocialButton(Icons.apple, Colors.black),
-                      const SizedBox(width: 16),
-                      _buildSocialButton(Icons.facebook, Colors.blue),
                     ],
                   ),
 
@@ -461,18 +555,22 @@ class _LogInScreenState extends State<LogInScreen>
     );
   }
 
-  Widget _buildModernButton(bool isLoading) {
+  Widget _buildModernButton(bool isLoading, bool isLocked) {
     return Container(
       height: 56,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
+          colors: isLocked
+              ? [Colors.grey.shade400, Colors.grey.shade500]
+              : [
             const Color(0xFF7165D6),
             Colors.deepPurple.shade700,
           ],
         ),
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
+        boxShadow: isLocked
+            ? []
+            : [
           BoxShadow(
             color: const Color(0xFF7165D6).withOpacity(0.4),
             blurRadius: 16,
@@ -481,11 +579,12 @@ class _LogInScreenState extends State<LogInScreen>
         ],
       ),
       child: ElevatedButton(
-        onPressed: isLoading ? null : _logIn,
+        onPressed: (isLoading || isLocked) ? null : _logIn,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          disabledBackgroundColor: Colors.transparent,
         ),
         child: isLoading
             ? const SizedBox(
@@ -496,38 +595,25 @@ class _LogInScreenState extends State<LogInScreen>
             strokeWidth: 3,
           ),
         )
-            : const Text(
-          "Log In",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
-          ),
+            : Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isLocked)
+              const Padding(
+                padding: EdgeInsets.only(right: 8),
+                child: Icon(Icons.lock, size: 20, color: Colors.white),
+              ),
+            Text(
+              isLocked ? "Account Locked" : "Log In",
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSocialButton(IconData icon, Color color) {
-    return Container(
-      height: 56,
-      width: 56,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: IconButton(
-        icon: Icon(icon, color: color, size: 28),
-        onPressed: () {},
       ),
     );
   }
