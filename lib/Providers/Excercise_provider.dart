@@ -12,6 +12,7 @@ class HiveConfig {
   static const String extraExercisesBox = 'extra_exercises';
   static const String settingsBox = 'settings';
   static const String workoutLogsBox = 'workout_logs';
+
 }
 
 class ExerciseProvider with ChangeNotifier {

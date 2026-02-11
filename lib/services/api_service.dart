@@ -257,21 +257,73 @@ class ApiService {
 
 
 
-  /// OTP-based Reset Password
-  static Future<Map<String, dynamic>> resetPassword({
+  /// Verify OTP (before password reset)
+  static Future<Map<String, dynamic>> verifyOTP({
     required String email,
     required String otp,
+  }) async {
+    try {
+      if (kDebugMode) debugPrint('🔵 Verifying OTP for: $email');
+
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/auth/verify-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': email,
+          'otp': otp,
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (kDebugMode) debugPrint('📥 Status: ${response.statusCode}');
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'OTP verified successfully',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Invalid or expired OTP',
+          'code': data['code'],
+        };
+      }
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Connection timeout. Please try again.',
+      };
+    } on http.ClientException {
+      return {
+        'success': false,
+        'message': 'Cannot connect to server. Please check your internet connection.',
+      };
+    } catch (e) {
+      if (kDebugMode) debugPrint('🔴 Error: $e');
+      return {
+        'success': false,
+        'message': 'Network error. Please try again.',
+      };
+    }
+  }
+
+
+
+  ///  Reset Password
+  static Future<Map<String, dynamic>> resetPassword({
+    required String email,
     required String newPassword,
   }) async {
     try {
-      if (kDebugMode) debugPrint('🔵 Resetting password with OTP');
+      if (kDebugMode) debugPrint('🔵 Resetting password');
 
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/auth/reset-password'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'email': email,
-          'otp': otp,
           'newPassword': newPassword,
         }),
       ).timeout(const Duration(seconds: 15));
