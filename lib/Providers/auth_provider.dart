@@ -13,11 +13,12 @@ class AuthProvider extends ChangeNotifier {
   String? _token;
   String? _error;
 
-  // 🆕 Lock-related properties
+  // Lock-related properties
   bool _isLocked = false;
   int _remainingSeconds = 0;
   DateTime? _lockUntil;
-  Timer? _lockTimer; // 🔥 Timer instance
+  Timer? _lockTimer;
+  bool _isDisposed = false; // 🆕 Track disposal
 
   // ================= GETTERS =================
 
@@ -32,7 +33,7 @@ class AuthProvider extends ChangeNotifier {
   String? get email => _user?['email'];
   String? get phone => _user?['phone'];
 
-  // 🆕 Lock getters
+  // Lock getters
   bool get isLocked => _isLocked;
   int get remainingSeconds => _remainingSeconds;
 
@@ -57,19 +58,29 @@ class AuthProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _lockTimer?.cancel(); // 🔥 Cancel timer on dispose
+    _isDisposed = true;
+    _lockTimer?.cancel();
+    _lockTimer = null;
     super.dispose();
   }
 
   // ================= CORE HELPERS =================
 
   void _setLoading(bool value) {
+    if (_isDisposed) return;
     _isLoading = value;
     notifyListeners();
   }
 
   void _clearError() {
     _error = null;
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
   }
 
   Future<void> _restoreAuthState() async {
@@ -89,13 +100,20 @@ class AuthProvider extends ChangeNotifier {
         _isLoggedIn = false;
       }
 
-      // 🆕 Restore lock info
+      // Restore lock info
       final lockUntilMs = _authBox.get('lockUntil');
-      if (lockUntilMs != null) {
-        _lockUntil = DateTime.fromMillisecondsSinceEpoch(lockUntilMs);
-        _updateLockStatus();
-        if (_isLocked) {
-          _startLockTimer();
+      if (lockUntilMs != null && lockUntilMs is int) {
+        try {
+          _lockUntil = DateTime.fromMillisecondsSinceEpoch(lockUntilMs);
+          _updateLockStatus();
+          if (_isLocked) {
+            _startLockTimer();
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint('❌ Invalid lock timestamp: $e');
+          }
+          await _clearLockFromStorage();
         }
       }
     } catch (e) {
@@ -110,29 +128,47 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _persistAuthState(String token, Map<String, dynamic> user) async {
-    _token = token;
-    _user = user;
-    _isLoggedIn = true;
+    try {
+      _token = token;
+      _user = user;
+      _isLoggedIn = true;
 
-    await _authBox.put('token', token);
-    await _authBox.put('user', user);
+      await _authBox.put('token', token);
+      await _authBox.put('user', user);
 
-    notifyListeners();
+      if (kDebugMode) {
+        debugPrint('✅ Auth state persisted');
+        debugPrint('   Username: ${user['username']}');
+        debugPrint('   Email: ${user['email']}');
+      }
+
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to persist auth state: $e');
+      }
+    }
   }
 
   Future<void> _clearAuthState() async {
-    _token = null;
-    _user = null;
-    _isLoggedIn = false;
-    _error = null;
+    try {
+      _token = null;
+      _user = null;
+      _isLoggedIn = false;
+      _error = null;
 
-    await _authBox.delete('token');
-    await _authBox.delete('user');
+      await _authBox.delete('token');
+      await _authBox.delete('user');
 
-    notifyListeners();
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to clear auth state: $e');
+      }
+    }
   }
 
-  // 🔥 FIXED: Update lock status
+  // Update lock status
   void _updateLockStatus() {
     if (_lockUntil == null) {
       _isLocked = false;
@@ -141,7 +177,8 @@ class AuthProvider extends ChangeNotifier {
     }
 
     final now = DateTime.now();
-    if (now.isAfter(_lockUntil!) || now.isAtSameMomentAs(_lockUntil!)) {
+
+    if (_lockUntil!.isBefore(now)) {
       // Lock expired
       if (kDebugMode) debugPrint('🔓 Lock expired');
       _isLocked = false;
@@ -152,36 +189,45 @@ class AuthProvider extends ChangeNotifier {
       _clearLockFromStorage();
       notifyListeners();
     } else {
-      // Still locked - calculate remaining time
+      // Still locked
       _isLocked = true;
       _remainingSeconds = _lockUntil!.difference(now).inSeconds;
 
       if (kDebugMode) debugPrint('🔒 Lock remaining: $_remainingSeconds seconds');
-
-      // Don't call notifyListeners here, let the timer handle it
     }
   }
 
-  // 🔥 FIXED: Start lock countdown timer
+  // Start lock countdown timer
   void _startLockTimer() {
-    // Cancel existing timer if any
     _lockTimer?.cancel();
+    _lockTimer = null;
 
-    if (_lockUntil == null) return;
+    if (_lockUntil == null || _isDisposed) return;
 
     if (kDebugMode) debugPrint('⏰ Starting lock timer');
 
-    // 🔥 Use periodic timer to update every second
+    final now = DateTime.now();
+    _remainingSeconds = _lockUntil!.difference(now).inSeconds;
+
+    if (_remainingSeconds <= 0) {
+      _isLocked = false;
+      _remainingSeconds = 0;
+      _lockUntil = null;
+      _clearLockFromStorage();
+      notifyListeners();
+      return;
+    }
+
     _lockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_lockUntil == null) {
+      if (_isDisposed || _lockUntil == null) {
         timer.cancel();
+        _lockTimer = null;
         return;
       }
 
       final now = DateTime.now();
 
-      if (now.isAfter(_lockUntil!) || now.isAtSameMomentAs(_lockUntil!)) {
-        // Lock expired
+      if (now.isAfter(_lockUntil!)) {
         if (kDebugMode) debugPrint('🔓 Timer: Lock expired');
         _isLocked = false;
         _remainingSeconds = 0;
@@ -189,53 +235,38 @@ class AuthProvider extends ChangeNotifier {
         _clearLockFromStorage();
         timer.cancel();
         _lockTimer = null;
-        notifyListeners(); // 🔥 Notify when lock expires
+        notifyListeners();
       } else {
-        // Update remaining time
+        final previousSeconds = _remainingSeconds;
         _remainingSeconds = _lockUntil!.difference(now).inSeconds;
 
-        if (kDebugMode && _remainingSeconds % 10 == 0) {
-          debugPrint('⏰ Timer update: $_remainingSeconds seconds remaining');
+        if (previousSeconds != _remainingSeconds) {
+          if (kDebugMode && _remainingSeconds % 10 == 0) {
+            debugPrint('⏰ Timer: $_remainingSeconds seconds remaining');
+          }
+          notifyListeners();
         }
-
-        notifyListeners(); // 🔥 Notify every second to update UI
       }
     });
   }
 
-  // 🆕 Save lock info to storage
   Future<void> _saveLockToStorage() async {
-    if (_lockUntil != null) {
-      await _authBox.put('lockUntil', _lockUntil!.millisecondsSinceEpoch);
-      if (kDebugMode) debugPrint('💾 Saved lock until: $_lockUntil');
+    try {
+      if (_lockUntil != null) {
+        await _authBox.put('lockUntil', _lockUntil!.millisecondsSinceEpoch);
+        if (kDebugMode) debugPrint('💾 Saved lock until: $_lockUntil');
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('❌ Failed to save lock: $e');
     }
   }
 
-  // 🆕 Clear lock info from storage
   Future<void> _clearLockFromStorage() async {
-    await _authBox.delete('lockUntil');
-    if (kDebugMode) debugPrint('🗑️ Cleared lock from storage');
-  }
-
-  Future<bool> _authWrapper(Future<Map<String, dynamic>> Function() action) async {
-    _setLoading(true);
-    _clearError();
-
     try {
-      final result = await action();
-
-      if (result['success'] == true) {
-        return true;
-      } else {
-        _error = result['message'] ?? 'Something went wrong';
-        return false;
-      }
+      await _authBox.delete('lockUntil');
+      if (kDebugMode) debugPrint('🗑️ Cleared lock from storage');
     } catch (e) {
-      _error = 'Network error. Please try again.';
-      if (kDebugMode) debugPrint('Auth error: $e');
-      return false;
-    } finally {
-      _setLoading(false);
+      if (kDebugMode) debugPrint('❌ Failed to clear lock: $e');
     }
   }
 
@@ -254,18 +285,29 @@ class AuthProvider extends ChangeNotifier {
 
       if (kDebugMode) debugPrint('📥 Login result: $result');
 
-      // 🔥 Handle account locked
-      if (result['code'] == 'ACCOUNT_LOCKED' || (result['success'] == false && result['lockUntil'] != null)) {
+      // Handle account locked
+      if (result['code'] == 'ACCOUNT_LOCKED' ||
+          (result['success'] == false && result['lockUntil'] != null)) {
         _isLocked = true;
-        _remainingSeconds = result['remainingSeconds'] ?? 0;
+
+        final remainingSecondsValue = result['remainingSeconds'];
+        _remainingSeconds = (remainingSecondsValue is int) ? remainingSecondsValue : 0;
 
         if (result['lockUntil'] != null) {
-          _lockUntil = DateTime.fromMillisecondsSinceEpoch(result['lockUntil']);
-          await _saveLockToStorage();
-          _startLockTimer();
-          if (kDebugMode) {
-            debugPrint('🔒 Account locked until: $_lockUntil');
-            debugPrint('🔒 Remaining: $_remainingSeconds seconds');
+          try {
+            final lockUntilValue = result['lockUntil'];
+            if (lockUntilValue is int) {
+              _lockUntil = DateTime.fromMillisecondsSinceEpoch(lockUntilValue);
+              await _saveLockToStorage();
+              _startLockTimer();
+
+              if (kDebugMode) {
+                debugPrint('🔒 Account locked until: $_lockUntil');
+                debugPrint('🔒 Remaining: $_remainingSeconds seconds');
+              }
+            }
+          } catch (e) {
+            if (kDebugMode) debugPrint('❌ Lock time parsing error: $e');
           }
         }
 
@@ -275,7 +317,7 @@ class AuthProvider extends ChangeNotifier {
       }
 
       if (result['success'] == true) {
-        //  Clear lock info on successful login
+        // Clear lock info on successful login
         _isLocked = false;
         _remainingSeconds = 0;
         _lockUntil = null;
@@ -299,14 +341,17 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Register new user
+  /// 🔥 FIXED: Register new user
   Future<bool> register({
     required String username,
     required String email,
     required String password,
     required String phone,
   }) async {
-    return _authWrapper(() async {
+    _setLoading(true);
+    _clearError();
+
+    try {
       final result = await ApiService.register(
         username: username,
         email: email,
@@ -314,19 +359,38 @@ class AuthProvider extends ChangeNotifier {
         phone: phone,
       );
 
-      if (result['success'] == true) {
-        await _persistAuthState(result['token'], result['user']);
-      }
+      if (kDebugMode) debugPrint('📥 Register result: $result');
 
-      return result;
-    });
+      if (result['success'] == true) {
+        // ✅ FIX: Directly persist auth state like login does
+        await _persistAuthState(result['token'], result['user']);
+
+        if (kDebugMode) {
+          debugPrint('✅ Registration successful');
+          debugPrint('   Username: ${result['user']['username']}');
+          debugPrint('   Email: ${result['user']['email']}');
+        }
+
+        _setLoading(false);
+        return true;
+      } else {
+        _error = result['message'] ?? 'Registration failed';
+        _setLoading(false);
+        return false;
+      }
+    } catch (e) {
+      _error = 'Network error. Please try again.';
+      if (kDebugMode) debugPrint('Register error: $e');
+      _setLoading(false);
+      return false;
+    }
   }
 
   /// Logout
   Future<void> logout() async {
     await ApiService.logout();
 
-    // 🔥 Clear lock info on logout
+    // Clear lock info on logout
     _isLocked = false;
     _remainingSeconds = 0;
     _lockUntil = null;
@@ -341,7 +405,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Update profile (username/email/phone/password)
+  /// Update profile
   Future<bool> updateProfile({
     required String username,
     required String email,
@@ -362,10 +426,7 @@ class AuthProvider extends ChangeNotifier {
       );
 
       if (result['success'] == true) {
-        // ✅ FIX: Update local user data with new values
         _user = result['user'];
-
-        // ✅ FIX: Save to Hive storage
         await _authBox.put('user', _user);
 
         if (kDebugMode) {
@@ -375,9 +436,7 @@ class AuthProvider extends ChangeNotifier {
           debugPrint('   New phone: ${_user!['phone']}');
         }
 
-        // ✅ FIX: Notify listeners to update UI
         notifyListeners();
-
         _setLoading(false);
         return true;
       } else {
@@ -392,13 +451,13 @@ class AuthProvider extends ChangeNotifier {
       return false;
     }
   }
+
   /// Refresh profile from backend
   Future<void> refreshProfile() async {
     try {
       final result = await ApiService.getProfile();
 
       if (result['success'] == true) {
-        // ✅ FIX: Extract user data properly
         final userData = {
           'username': result['username'],
           'email': result['email'],
