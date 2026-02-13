@@ -209,7 +209,7 @@ class RegularExerciseScreen extends StatelessWidget {
       return;
     }
 
-    await provider.resetDayExercises(dayName);
+    await provider.markWorkoutCompleted(dayName);
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

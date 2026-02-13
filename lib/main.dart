@@ -13,12 +13,15 @@ import 'models/workout_log_model.dart';
 import 'Providers/Excercise_provider.dart';
 import 'Providers/auth_provider.dart';
 
+
+
 class HiveConfig {
   static const String workoutDaysBox = 'workout_days';
   static const String extraExercisesBox = 'extra_exercises';
   static const String settingsBox = 'settings';
   static const String authBox = 'auth_data';
   static const String workoutLogsBox = 'workout_logs';
+  static const String metaBox = 'meta_box';
 
   static const int exerciseSetAdapterId = 1;
   static const int exerciseAdapterId = 3;
@@ -67,6 +70,9 @@ Future<void> _initializeHive() async {
       Hive.openBox(HiveConfig.settingsBox),
       Hive.openBox(HiveConfig.authBox),
       Hive.openBox<WorkoutLog>(HiveConfig.workoutLogsBox),
+      Hive.openBox(HiveConfig.metaBox),
+
+
     ]);
 
     debugPrint('✅ Hive initialized successfully');
@@ -87,7 +93,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
       ],
       child: MaterialApp(
-        title: 'Workout Tracker',
+        title: 'FitMetrics',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           primarySwatch: Colors.deepPurple,

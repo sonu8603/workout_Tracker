@@ -12,6 +12,7 @@ class HiveConfig {
   static const String extraExercisesBox = 'extra_exercises';
   static const String settingsBox = 'settings';
   static const String workoutLogsBox = 'workout_logs';
+  static const String metaBox = 'meta_box';
 
 }
 
@@ -303,8 +304,22 @@ class ExerciseProvider with ChangeNotifier {
 
   List<Exercise> getExercisesForDate(DateTime date) {
     final key = DateTime(date.year, date.month, date.day);
+    final metaBox = Hive.box(HiveConfig.metaBox);
+    final completedAtStr = metaBox.get('extra_${_dateToString(date)}');
+
+    if (completedAtStr != null) {
+      final completedAt = DateTime.parse(completedAtStr);
+      final diff = DateTime.now().difference(completedAt);
+
+      if (diff.inHours >= 12) {
+        resetExtraExercises(date);
+        metaBox.delete('extra_${_dateToString(date)}');
+      }
+    }
+
     return _extraExercises[key] ?? [];
   }
+
 
   Future<bool> updateExerciseSet(DateTime date, int exerciseIndex, int setIndex,
       String weight, String reps) async {
@@ -543,17 +558,27 @@ class ExerciseProvider with ChangeNotifier {
 
   List<Exercise> getExercisesForDay(String dayName) {
     try {
+      final metaBox = Hive.box(HiveConfig.metaBox);
+      final completedAtStr = metaBox.get('${dayName}_completedAt');
+
+      if (completedAtStr != null) {
+        final completedAt = DateTime.parse(completedAtStr);
+        final diff = DateTime.now().difference(completedAt);
+
+        if (diff.inHours >= 12) {
+          resetDayExercises(dayName);
+          metaBox.delete('${dayName}_completedAt');
+        }
+      }
+
       final day = _days.firstWhere((d) => d.name == dayName);
-      return day.exercises.where((ex) {
-        return ex.date.year != 2000;
-      }).toList();
-
-
+      return day.exercises.where((ex) => ex.date.year != 2000).toList();
     } catch (e) {
       _lastError = 'Day not found: $dayName';
       return [];
     }
   }
+
 
   Future<bool> removeDayExercise(String dayName, int index) async {
     try {
@@ -1018,6 +1043,13 @@ class ExerciseProvider with ChangeNotifier {
   }
        //  reset exercises section
 
+  // for day exercise
+  Future<void> markWorkoutCompleted(String dayName) async {
+    final metaBox = Hive.box(HiveConfig.metaBox);
+    await metaBox.put('${dayName}_completedAt', DateTime.now().toIso8601String());
+  }
+
+
   Future<bool> resetDayExercises(String dayName) async {
     try {
       final day = _days.firstWhere((d) => d.name == dayName);
@@ -1041,6 +1073,16 @@ class ExerciseProvider with ChangeNotifier {
       return false;
     }
   }
+
+    // for extra exercise
+
+  Future<void> markExtraWorkoutCompleted(DateTime date) async {
+    final metaBox = Hive.box(HiveConfig.metaBox);
+    final key = _dateToString(date);
+    await metaBox.put('extra_$key', DateTime.now().toIso8601String());
+  }
+
+
 
   Future<bool> resetExtraExercises(DateTime date) async {
     try {

@@ -95,7 +95,7 @@ class AuthProvider extends ChangeNotifier {
         _lockUntil = DateTime.fromMillisecondsSinceEpoch(lockUntilMs);
         _updateLockStatus();
         if (_isLocked) {
-          _startLockTimer(); // 🔥 Restart timer if still locked
+          _startLockTimer();
         }
       }
     } catch (e) {
@@ -349,7 +349,10 @@ class AuthProvider extends ChangeNotifier {
     String? currentPassword,
     String? newPassword,
   }) async {
-    return _authWrapper(() async {
+    _setLoading(true);
+    _clearError();
+
+    try {
       final result = await ApiService.updateProfile(
         username: username,
         email: email,
@@ -359,22 +362,62 @@ class AuthProvider extends ChangeNotifier {
       );
 
       if (result['success'] == true) {
+        // ✅ FIX: Update local user data with new values
         _user = result['user'];
+
+        // ✅ FIX: Save to Hive storage
         await _authBox.put('user', _user);
+
+        if (kDebugMode) {
+          debugPrint('✅ Profile updated successfully');
+          debugPrint('   New username: ${_user!['username']}');
+          debugPrint('   New email: ${_user!['email']}');
+          debugPrint('   New phone: ${_user!['phone']}');
+        }
+
+        // ✅ FIX: Notify listeners to update UI
         notifyListeners();
+
+        _setLoading(false);
+        return true;
+      } else {
+        _error = result['message'] ?? 'Failed to update profile';
+        _setLoading(false);
+        return false;
       }
-
-      return result;
-    });
+    } catch (e) {
+      _error = 'Network error. Please try again.';
+      if (kDebugMode) debugPrint('Update profile error: $e');
+      _setLoading(false);
+      return false;
+    }
   }
-
   /// Refresh profile from backend
   Future<void> refreshProfile() async {
     try {
       final result = await ApiService.getProfile();
+
       if (result['success'] == true) {
-        _user = result['profile'];
-        await _authBox.put('user', _user);
+        // ✅ FIX: Extract user data properly
+        final userData = {
+          'username': result['username'],
+          'email': result['email'],
+          'phone': result['phone'],
+          'profileImage': result['profileImage'],
+          'id': result['id'],
+          'role': result['role'],
+          'isActive': result['isActive'],
+          'createdAt': result['createdAt'],
+        };
+
+        _user = userData;
+        await _authBox.put('user', userData);
+
+        if (kDebugMode) {
+          debugPrint('✅ Profile refreshed');
+          debugPrint('   Username: ${_user!['username']}');
+        }
+
         notifyListeners();
       }
     } catch (e) {

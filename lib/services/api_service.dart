@@ -25,6 +25,28 @@ class ApiService {
     if (kDebugMode) debugPrint('🔓 Token removed');
   }
 
+  // ✅ NEW: Check for token refresh in response headers
+  static Future<void> _checkAndRefreshToken(http.Response response) async {
+    try {
+      // Check if backend sent a new token
+      final newToken = response.headers['x-new-token'];
+
+      if (newToken != null && newToken.isNotEmpty) {
+        // Save new token
+        await saveToken(newToken);
+
+        if (kDebugMode) {
+          debugPrint('🔄 Token auto-refreshed!');
+          debugPrint('   New token: ${newToken.substring(0, 30)}...');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('⚠️ Token refresh check failed: $e');
+      }
+    }
+  }
+
   // ============== USER DATA MANAGEMENT ==============
 
   static Future<void> saveUserData(Map<String, dynamic> userData) async {
@@ -67,6 +89,9 @@ class ApiService {
       ).timeout(const Duration(seconds: 15));
 
       if (kDebugMode) debugPrint('📥 Status: ${response.statusCode}');
+
+      // ✅ Check for token refresh
+      await _checkAndRefreshToken(response);
 
       final data = json.decode(response.body);
 
@@ -127,6 +152,9 @@ class ApiService {
         debugPrint('📥 Status: ${response.statusCode}');
         debugPrint('📥 Response: ${response.body}');
       }
+
+      // ✅ Check for token refresh
+      await _checkAndRefreshToken(response);
 
       final data = json.decode(response.body);
 
@@ -221,6 +249,9 @@ class ApiService {
 
       if (kDebugMode) debugPrint('📥 Status: ${response.statusCode}');
 
+      // ✅ Check for token refresh
+      await _checkAndRefreshToken(response);
+
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
@@ -276,6 +307,9 @@ class ApiService {
 
       if (kDebugMode) debugPrint('📥 Status: ${response.statusCode}');
 
+      // ✅ Check for token refresh
+      await _checkAndRefreshToken(response);
+
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
@@ -330,6 +364,9 @@ class ApiService {
 
       if (kDebugMode) debugPrint('📥 Status: ${response.statusCode}');
 
+      // ✅ Check for token refresh
+      await _checkAndRefreshToken(response);
+
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
@@ -348,11 +385,6 @@ class ApiService {
       return {
         'success': false,
         'message': 'Connection timeout. Please try again.',
-      };
-    } on http.ClientException {
-      return {
-        'success': false,
-        'message': 'Cannot connect to server. Please check your internet connection.',
       };
     } catch (e) {
       if (kDebugMode) debugPrint('🔴 Error: $e');
@@ -391,6 +423,9 @@ class ApiService {
       ).timeout(const Duration(seconds: 10));
 
       if (kDebugMode) debugPrint('📥 Profile Status: ${response.statusCode}');
+
+      // ✅ Check for token refresh (IMPORTANT!)
+      await _checkAndRefreshToken(response);
 
       final data = json.decode(response.body);
 
@@ -471,6 +506,9 @@ class ApiService {
         body: json.encode(updateData),
       ).timeout(const Duration(seconds: 10));
 
+      // ✅ Check for token refresh (IMPORTANT!)
+      await _checkAndRefreshToken(response);
+
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
@@ -521,6 +559,9 @@ class ApiService {
         body: json.encode({'profileImage': imageUrl}),
       ).timeout(const Duration(seconds: 15));
 
+      // ✅ Check for token refresh (IMPORTANT!)
+      await _checkAndRefreshToken(response);
+
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
@@ -551,6 +592,26 @@ class ApiService {
   }
 
   static Future<void> logout() async {
+    // ✅ Call backend logout endpoint for token blacklisting
+    try {
+      final token = getToken();
+      if (token != null) {
+        await http.post(
+          Uri.parse('${ApiConfig.baseUrl}/auth/logout'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        ).timeout(const Duration(seconds: 5));
+
+        if (kDebugMode) debugPrint('✅ Backend logout successful');
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('⚠️ Backend logout failed: $e');
+      // Continue with local logout even if backend fails
+    }
+
+    // Clear local data
     await _authBox.clear();
     if (kDebugMode) debugPrint('🚪 Logged out');
   }

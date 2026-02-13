@@ -215,7 +215,7 @@ class ExtraExerciseScreen extends StatelessWidget {
       return;
     }
 
-    await provider.resetExtraExercises(date);
+    await provider.markExtraWorkoutCompleted(date);
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
