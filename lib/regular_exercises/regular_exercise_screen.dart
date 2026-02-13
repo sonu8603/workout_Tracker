@@ -98,7 +98,7 @@ class RegularExerciseScreen extends StatelessWidget {
           ? FloatingActionButton(
         onPressed: () => _showAddExerciseDialog(context),
         backgroundColor: Colors.deepPurple,
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add,color: Colors.white,),
       )
           : null,
     );

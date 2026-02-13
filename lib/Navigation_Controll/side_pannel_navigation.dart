@@ -304,9 +304,8 @@ class _SidePanelContent extends StatelessWidget {
           children: [
             Text("Need help with the app?"),
             SizedBox(height: 16),
-            Text("📧 Email: support@workouttracker.com"),
-            SizedBox(height: 8),
-            Text("🌐 Website: www.workouttracker.com"),
+            Text("📧 Email: fitmetrics.team@gmail.com"),
+
             SizedBox(height: 8),
             Text("📱 Version: 1.0.0"),
           ],

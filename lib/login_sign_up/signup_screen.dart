@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart'; // 🔥 ADD THIS
 import 'package:workout_tracker/login_sign_up/logIn_screen.dart';
 import '../home_screen/set_up_routein_days.dart';
-import '../services/api_service.dart'; // ✅ FIXED: Removed 's' from services
+import '../Providers/auth_provider.dart'; // 🔥 ADD THIS - Update path if needed
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -14,7 +16,7 @@ class SignUpScreen extends StatefulWidget {
 class _ModernSignUpScreenState extends State<SignUpScreen>
     with SingleTickerProviderStateMixin {
   bool passToggle = true;
-  bool _isLoading = false;
+  // 🔥 REMOVED: bool _isLoading = false; (will use from AuthProvider)
 
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
@@ -48,46 +50,70 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
     super.dispose();
   }
 
+  // 🔥 FIXED: Use AuthProvider instead of ApiService directly
   void _signUp() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    // 🔥 Get AuthProvider
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    // Call register API
-    final result = await ApiService.register(
+    if (kDebugMode) {
+      debugPrint('🔷 ==========================================');
+      debugPrint('🔷 SIGNUP: Calling register...');
+      debugPrint('🔷 Username: ${_nameController.text.trim()}');
+      debugPrint('🔷 Email: ${_emailController.text.trim()}');
+      debugPrint('🔷 ==========================================');
+    }
+
+    // 🔥 CRITICAL: Call AuthProvider's register method
+    final success = await authProvider.register(
       username: _nameController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
       phone: _phoneController.text.trim(),
     );
 
-
+    if (kDebugMode) {
+      debugPrint('🔷 Registration result: $success');
+      debugPrint('🔷 isLoggedIn: ${authProvider.isLoggedIn}');
+      debugPrint('🔷 username: ${authProvider.username}');
+    }
 
     if (!mounted) return;
 
-    setState(() => _isLoading = false);
+    if (success) {
+      if (kDebugMode) {
+        debugPrint('✅ Registration successful, showing snackbar...');
+      }
 
-    if (result['success']) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.check_circle, color: Colors.white),
-              const SizedBox(width: 12),
-              Text(result['message'] ?? 'Account created successfully!'),
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 12),
+              Text('Account created successfully!'),
             ],
           ),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          duration: const Duration(milliseconds: 800),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+          duration: Duration(milliseconds: 800),
         ),
       );
 
+      // 🔥 CRITICAL: Wait for snackbar + state to settle
       await Future.delayed(const Duration(milliseconds: 900));
 
       if (!mounted) return;
 
+      if (kDebugMode) {
+        debugPrint('🔷 Navigating to SetUpRouteinDays...');
+      }
+
+      // 🔥 Navigate to setup screen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -95,10 +121,13 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
         ),
       );
     } else {
-      _showError(result['message']);
+      // 🔥 Show error from AuthProvider
+      if (kDebugMode) {
+        debugPrint('❌ Registration failed: ${authProvider.error}');
+      }
+
+      _showError(authProvider.error ?? 'Registration failed');
     }
-
-
   }
 
   void _showError(String message) {
@@ -122,187 +151,194 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 20),
-                    Center(
-                      child: Container(
-                        height: 100,
-                        width: 100,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.deepPurple.shade400,
-                              Colors.deepPurple.shade700,
-                            ],
+      // 🔥 CRITICAL: Wrap with Consumer to get loading state
+      body: Consumer<AuthProvider>(
+        builder: (context, authProvider, child) {
+          final isLoading = authProvider.isLoading;
+
+          return SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 20),
+                        Center(
+                          child: Container(
+                            height: 100,
+                            width: 100,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.deepPurple.shade400,
+                                  Colors.deepPurple.shade700,
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(30),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.deepPurple.withOpacity(0.3),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.fitness_center,
+                              size: 60,
+                              color: Colors.white,
+                            ),
                           ),
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.deepPurple.withOpacity(0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          "Create Account",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2D3142),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "Sign up to get started with your fitness journey",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                        _buildModernTextField(
+                          controller: _nameController,
+                          label: "Full Name",
+                          hint: "Enter your full name",
+                          icon: Icons.person_outline,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return "Please enter your full name";
+                            }
+                            if (value.trim().length < 3) {
+                              return "Name must be at least 3 characters";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        _buildModernTextField(
+                          controller: _emailController,
+                          label: "Email",
+                          hint: "your.email@example.com",
+                          icon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Please enter your email";
+                            }
+                            final emailRegex = RegExp(
+                                r'^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$');
+                            if (!emailRegex.hasMatch(value)) {
+                              return "Enter a valid email address";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        _buildModernTextField(
+                          controller: _phoneController,
+                          label: "Phone Number",
+                          hint: "Enter 10-digit number",
+                          icon: Icons.phone_outlined,
+                          keyboardType: TextInputType.phone,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Please enter your phone number";
+                            }
+                            final phoneRegex = RegExp(r'^[0-9]{10}$');
+                            if (!phoneRegex.hasMatch(value)) {
+                              return "Enter a valid 10-digit phone number";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        _buildPasswordField(),
+                        const SizedBox(height: 32),
+                        _buildModernButton(isLoading), // 🔥 Pass isLoading
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(child: Divider(color: Colors.grey.shade300)),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Text(
+                                "OR",
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            Expanded(child: Divider(color: Colors.grey.shade300)),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildSocialButton(Icons.g_mobiledata, Colors.red),
+                            const SizedBox(width: 16),
+                            _buildSocialButton(Icons.apple, Colors.black),
+                            const SizedBox(width: 16),
+                            _buildSocialButton(Icons.facebook, Colors.blue),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Already have an account? ",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => const LogInScreen()),
+                                );
+                              },
+                              child: const Text(
+                                "Login",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF7165D6),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.fitness_center,
-                          size: 60,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      "Create Account",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2D3142),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Sign up to get started with your fitness journey",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    _buildModernTextField(
-                      controller: _nameController,
-                      label: "Full Name",
-                      hint: "Enter your full name",
-                      icon: Icons.person_outline,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return "Please enter your full name";
-                        }
-                        if (value.trim().length < 3) {
-                          return "Name must be at least 3 characters";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    _buildModernTextField(
-                      controller: _emailController,
-                      label: "Email",
-                      hint: "your.email@example.com",
-                      icon: Icons.email_outlined,
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return "Please enter your email";
-                        }
-                        final emailRegex = RegExp(
-                            r'^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$');
-                        if (!emailRegex.hasMatch(value)) {
-                          return "Enter a valid email address";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    _buildModernTextField(
-                      controller: _phoneController,
-                      label: "Phone Number",
-                      hint: "Enter 10-digit number",
-                      icon: Icons.phone_outlined,
-                      keyboardType: TextInputType.phone,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return "Please enter your phone number";
-                        }
-                        final phoneRegex = RegExp(r'^[0-9]{10}$');
-                        if (!phoneRegex.hasMatch(value)) {
-                          return "Enter a valid 10-digit phone number";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    _buildPasswordField(),
-                    const SizedBox(height: 32),
-                    _buildModernButton(),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(child: Divider(color: Colors.grey.shade300)),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            "OR",
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        Expanded(child: Divider(color: Colors.grey.shade300)),
+                        const SizedBox(height: 20),
                       ],
                     ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildSocialButton(Icons.g_mobiledata, Colors.red),
-                        const SizedBox(width: 16),
-                        _buildSocialButton(Icons.apple, Colors.black),
-                        const SizedBox(width: 16),
-                        _buildSocialButton(Icons.facebook, Colors.blue),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Already have an account? ",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const LogInScreen()),
-                            );
-                          },
-                          child: const Text(
-                            "Login",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF7165D6),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -401,7 +437,8 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
     );
   }
 
-  Widget _buildModernButton() {
+  // 🔥 FIXED: Use isLoading from parameter
+  Widget _buildModernButton(bool isLoading) {
     return Container(
       height: 56,
       decoration: BoxDecoration(
@@ -411,12 +448,12 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
         borderRadius: BorderRadius.circular(12),
       ),
       child: ElevatedButton(
-        onPressed: _isLoading ? null : _signUp,
+        onPressed: isLoading ? null : _signUp,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
         ),
-        child: _isLoading
+        child: isLoading
             ? const CircularProgressIndicator(color: Colors.white)
             : const Text(
           "Create Account",
