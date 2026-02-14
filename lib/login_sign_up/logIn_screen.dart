@@ -1,9 +1,11 @@
 // lib/login_sign_up/logIn_screen.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:workout_tracker/Navigation_Controll/navigation_controll.dart';
 import 'package:workout_tracker/login_sign_up/signup_screen.dart';
+import '../Providers/Excercise_provider.dart';
 import '../Providers/auth_provider.dart';
 import 'forget_password.dart';
 
@@ -63,6 +65,21 @@ class _LogInScreenState extends State<LogInScreen>
     if (!mounted) return;
 
     if (success) {
+      final userId = authProvider.userId;
+
+
+      if (userId != null) {
+        final exerciseProvider = Provider.of<ExerciseProvider>(context, listen: false);
+        await exerciseProvider.initializeForUser(userId);
+
+        if (kDebugMode) {
+          debugPrint('✅ ExerciseProvider initialized for user: $userId');
+        }
+      }
+
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(

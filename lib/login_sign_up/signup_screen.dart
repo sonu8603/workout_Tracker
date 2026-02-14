@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart'; // 🔥 ADD THIS
 import 'package:workout_tracker/login_sign_up/logIn_screen.dart';
+import '../Providers/Excercise_provider.dart';
 import '../home_screen/set_up_routein_days.dart';
 import '../Providers/auth_provider.dart'; // 🔥 ADD THIS - Update path if needed
 
@@ -82,6 +83,14 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
     if (!mounted) return;
 
     if (success) {
+
+      // Get userId and initialize exercise provider
+      final userId = authProvider.userId;
+      if (userId != null) {
+        final exerciseProvider = Provider.of<ExerciseProvider>(context, listen: false);
+        await exerciseProvider.initializeForUser(userId);
+      }
+      if (!mounted) return;
       if (kDebugMode) {
         debugPrint('✅ Registration successful, showing snackbar...');
       }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive_flutter/adapters.dart';
+import 'package:provider/provider.dart';
+import '../Providers/Excercise_provider.dart';
 import '../models/workout_log_model.dart';
-import '../main.dart';
 import 'history_exercises_screen.dart';
 
 class HistoryWorkoutLogsScreen extends StatelessWidget {
@@ -20,7 +21,16 @@ class HistoryWorkoutLogsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final box = Hive.box<WorkoutLog>(HiveConfig.workoutLogsBox);
+    final exerciseProvider = Provider.of<ExerciseProvider>(context);
+    final box = exerciseProvider.logsBox;
+
+    if (box == null) {
+      return const Scaffold(
+        body: Center(
+          child:Text("No exercise added yet",style: TextStyle(fontSize: 15),),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -28,17 +38,16 @@ class HistoryWorkoutLogsScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
         leading: (ModalRoute.of(context)?.canPop ?? false)
             ? IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 22),
+          icon: const Icon(Icons.arrow_back_ios,
+              color: Colors.white, size: 22),
           onPressed: () => Navigator.pop(context),
         )
             : null,
         backgroundColor: Colors.deepPurple,
-
-
       ),
-      body: ValueListenableBuilder<Box<WorkoutLog>>(
+      body: ValueListenableBuilder(
         valueListenable: box.listenable(),
-        builder: (context, box, _) {
+        builder: (context, Box<WorkoutLog> box, _) {
           if (box.isEmpty) {
             return const Center(
               child: Text(
@@ -70,25 +79,33 @@ class HistoryWorkoutLogsScreen extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 12),
                 elevation: 3,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: ListTile(
-                  leading: const Icon(Icons.calendar_today,
-                      color: Colors.deepPurple),
+                  leading: const Icon(
+                    Icons.calendar_today,
+                    color: Colors.deepPurple,
+                  ),
                   title: Text(
                     _formatDate(date),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   subtitle: Text(
                     '${dayLogs.length} workout sessions • '
                         '${dayLogs.fold<int>(0, (sum, l) => sum + l.totalCompletedSets)} sets',
                   ),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  trailing:
+                  const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) =>
-                            HistoryDayDetailScreen(date: date,logs: dayLogs,),
+                        builder: (_) => HistoryDayDetailScreen(
+                          date: date,
+                          logs: dayLogs,
+                        ),
                       ),
                     );
                   },

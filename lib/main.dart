@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -13,16 +13,19 @@ import 'models/workout_log_model.dart';
 import 'Providers/Excercise_provider.dart';
 import 'Providers/auth_provider.dart';
 
-
-
+// 🔥 CHANGED: Updated HiveConfig for user-specific boxes
 class HiveConfig {
-  static const String workoutDaysBox = 'workout_days';
-  static const String extraExercisesBox = 'extra_exercises';
-  static const String settingsBox = 'settings';
+  // Shared box (for auth only)
   static const String authBox = 'auth_data';
-  static const String workoutLogsBox = 'workout_logs';
-  static const String metaBox = 'meta_box';
 
+  // 🔥 NEW: User-specific box name generators
+  static String workoutDaysBox(String userId) => '${userId}_workouts';
+  static String extraExercisesBox(String userId) => '${userId}_extras';
+  static String settingsBox(String userId) => '${userId}_settings';
+  static String workoutLogsBox(String userId) => '${userId}_logs';
+  static String metaBox(String userId) => '${userId}_meta';
+
+  // Adapter IDs (unchanged)
   static const int exerciseSetAdapterId = 1;
   static const int exerciseAdapterId = 3;
   static const int workoutDayAdapterId = 4;
@@ -44,10 +47,12 @@ void main() async {
   runApp(const MyApp());
 }
 
+// 🔥 CHANGED: Only open auth box on app start
 Future<void> _initializeHive() async {
   try {
     await Hive.initFlutter();
 
+    // Register adapters
     if (!Hive.isAdapterRegistered(HiveConfig.exerciseSetAdapterId)) {
       Hive.registerAdapter(ExerciseSetAdapter());
     }
@@ -64,18 +69,11 @@ Future<void> _initializeHive() async {
       Hive.registerAdapter(WorkoutLogAdapter());
     }
 
-    await Future.wait([
-      Hive.openBox<WorkoutDay>(HiveConfig.workoutDaysBox),
-      Hive.openBox(HiveConfig.extraExercisesBox),
-      Hive.openBox(HiveConfig.settingsBox),
-      Hive.openBox(HiveConfig.authBox),
-      Hive.openBox<WorkoutLog>(HiveConfig.workoutLogsBox),
-      Hive.openBox(HiveConfig.metaBox),
+    // 🔥 CHANGED: Only open auth box here
+    // User-specific boxes will be opened after login by ExerciseProvider
+    await Hive.openBox(HiveConfig.authBox);
 
-
-    ]);
-
-    debugPrint('✅ Hive initialized successfully');
+    debugPrint('✅ Hive initialized (auth box only)');
   } catch (e, stackTrace) {
     debugPrint('❌ Error initializing Hive: $e');
     debugPrint('Stack trace: $stackTrace');
@@ -89,8 +87,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ExerciseProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ExerciseProvider()),
       ],
       child: MaterialApp(
         title: 'FitMetrics',
@@ -127,6 +125,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
+// 🔥 CHANGED: Better initialization logic
 class AppEntryPoint extends StatelessWidget {
   const AppEntryPoint({super.key});
 
@@ -134,7 +133,25 @@ class AppEntryPoint extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer2<AuthProvider, ExerciseProvider>(
       builder: (context, auth, exercise, child) {
-        if (auth.isLoading || !exercise.isInitialized) {
+        // Show splash while auth is loading
+        if (auth.isLoading) {
+          return const Scaffold(
+            backgroundColor: Colors.transparent,
+            body: SizedBox.shrink(),
+          );
+        }
+
+        // If logged in but exercise provider not initialized
+        if (auth.isLoggedIn && !exercise.isInitialized) {
+          // 🔥 NEW: Initialize exercise provider with userId
+          final userId = auth.userId;
+          if (userId != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              exercise.initializeForUser(userId);
+            });
+          }
+
+          // Show loading while initializing
           return const Scaffold(
             backgroundColor: Colors.transparent,
             body: SizedBox.shrink(),
@@ -143,7 +160,8 @@ class AppEntryPoint extends StatelessWidget {
 
         FlutterNativeSplash.remove();
 
-        if (auth.isLoggedIn) {
+        // Show appropriate screen
+        if (auth.isLoggedIn && exercise.isInitialized) {
           return const NavigationRoutePage();
         }
 

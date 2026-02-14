@@ -1,35 +1,33 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:workout_tracker/models/individual_set.dart';
 import 'package:workout_tracker/models/individual_exercise_model.dart';
 import '../models/workout_day.dart';
-
 import 'package:workout_tracker/models/workout_log_model.dart';
+import '../main.dart';
 
-class HiveConfig {
-  static const String workoutDaysBox = 'workout_days';
-  static const String extraExercisesBox = 'extra_exercises';
-  static const String settingsBox = 'settings';
-  static const String workoutLogsBox = 'workout_logs';
-  static const String metaBox = 'meta_box';
-
-}
+// 🔥 REMOVED: Local HiveConfig class (now using one from main.dart)
 
 class ExerciseProvider with ChangeNotifier {
   // Version control for data migration
   static const int currentVersion = 1;
 
-  late Box<WorkoutDay> _daysBox;
-  late Box _extraBox;
-  late Box _settingsBox;
-  late Box<WorkoutLog> _workoutLogsBox;
+
+
+  Box<WorkoutLog>? get logsBox => _workoutLogsBox;
+
+  Box<WorkoutDay>? _daysBox;
+  Box? _extraBox;
+  Box? _settingsBox;
+  Box<WorkoutLog>? _workoutLogsBox;
 
   List<WorkoutDay> _days = [];
   Map<DateTime, List<Exercise>> _extraExercises = {};
   int _selectedIndex = 0;
   bool _isInitialized = false;
+
   String? _lastError;
+  String? _currentUserId; // 🔥 NEW: Track current user
 
   // Getters
   List<WorkoutDay> get days => _days;
@@ -37,56 +35,131 @@ class ExerciseProvider with ChangeNotifier {
   bool get isInitialized => _isInitialized;
   String? get lastError => _lastError;
 
+  // 🔥 CHANGED: Constructor does NOT auto-initialize
   ExerciseProvider() {
-    _initializeAsync();
+    // Wait for initializeForUser() call from login/signup
   }
 
   // ================= INITIALIZATION =================
 
-  Future<void> _initializeAsync() async {
+  // 🔥 NEW: Initialize for specific user
+  Future<void> initializeForUser(String userId) async {
     try {
-      //  DEBUG: Add artificial delay to see loading screen
       if (kDebugMode) {
-        await Future.delayed(const Duration(seconds: 2));
-        debugPrint('⏰ Debug delay complete');
+        debugPrint('📦 ExerciseProvider: Initializing for user $userId');
       }
 
+      // Close previous user's boxes
+      await _closeBoxes();
+
+      _currentUserId = userId;
+
+      // Open user-specific boxes
+      _daysBox = await Hive.openBox<WorkoutDay>(HiveConfig.workoutDaysBox(userId));
+      _extraBox = await Hive.openBox(HiveConfig.extraExercisesBox(userId));
+      _settingsBox = await Hive.openBox(HiveConfig.settingsBox(userId));
+      _workoutLogsBox = await Hive.openBox<WorkoutLog>(HiveConfig.workoutLogsBox(userId));
+
+      if (kDebugMode) {
+        debugPrint('   ✅ Boxes opened');
+        debugPrint('   Days: ${_daysBox!.length}');
+        debugPrint('   Extras: ${_extraBox!.length}');
+        debugPrint('   Logs: ${_workoutLogsBox!.length}');
+      }
+
+      // Load data
       await _loadData();
       await _checkAndMigrate();
+
       _isInitialized = true;
+
+      if (kDebugMode) {
+        debugPrint('✅ ExerciseProvider initialized');
+      }
+
       notifyListeners();
     } catch (e) {
       _lastError = 'Failed to initialize: $e';
-      if (kDebugMode) debugPrint('ExerciseProvider initialization error: $e');
+      if (kDebugMode) debugPrint('❌ Initialization error: $e');
       _initializeDefaultState();
-      _isInitialized = true; // Mark as initialized even on error
+      _isInitialized = true;
       notifyListeners();
     }
   }
 
+  // 🔥 NEW: Clear on logout
+  Future<void> clearOnLogout() async {
+    try {
+      if (kDebugMode) {
+        debugPrint('📦 ExerciseProvider: Clearing on logout');
+      }
+
+      await _closeBoxes();
+
+      _currentUserId = null;
+      _isInitialized = false;
+      _days = [];
+      _extraExercises = {};
+      _selectedIndex = 0;
+
+      if (kDebugMode) {
+        debugPrint('✅ ExerciseProvider cleared');
+      }
+
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Clear error: $e');
+      }
+    }
+  }
+
+  // 🔥 NEW: Helper to close boxes
+  Future<void> _closeBoxes() async {
+    try {
+      await _daysBox?.close();
+      await _extraBox?.close();
+      await _settingsBox?.close();
+      await _workoutLogsBox?.close();
+
+      _daysBox = null;
+      _extraBox = null;
+      _settingsBox = null;
+      _workoutLogsBox = null;
+
+      if (kDebugMode) {
+        debugPrint('   ✅ Boxes closed');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('   ⚠️ Error closing boxes: $e');
+      }
+    }
+  }
+
+  // 🔥 CHANGED: Use already-open boxes (opened in initializeForUser)
   Future<void> _loadData() async {
     try {
-      // ✅ Use constants for box names - boxes already open from main.dart
-      _daysBox = Hive.box<WorkoutDay>(HiveConfig.workoutDaysBox);
-      _extraBox = Hive.box(HiveConfig.extraExercisesBox);
-      _settingsBox = Hive.box(HiveConfig.settingsBox);
-      _workoutLogsBox = Hive.box<WorkoutLog>(HiveConfig.workoutLogsBox);
-      if (kDebugMode) debugPrint(' Workout logs: ${_workoutLogsBox.length}');
+      // Verify boxes are open
+      if (_daysBox == null || _extraBox == null || _settingsBox == null || _workoutLogsBox == null) {
+        throw Exception('Boxes not initialized. Call initializeForUser() first.');
+      }
 
       if (kDebugMode) {
         debugPrint('📦 Loading data from Hive...');
-        debugPrint('Days box length: ${_daysBox.length}');
-        debugPrint('Extra box length: ${_extraBox.length}');
+        debugPrint('Days box length: ${_daysBox!.length}');
+        debugPrint('Extra box length: ${_extraBox!.length}');
+        debugPrint('🏋️ Workout logs: ${_workoutLogsBox!.length}');
       }
 
       // Load workout days or create default
-      if (_daysBox.isEmpty) {
+      if (_daysBox!.isEmpty) {
         if (kDebugMode) debugPrint('⚠️ Days box is empty, initializing defaults...');
         _initializeDefaultState();
         await _saveDays();
         if (kDebugMode) debugPrint('✅ Default days saved');
       } else {
-        _days = _daysBox.values.toList();
+        _days = _daysBox!.values.toList();
         if (kDebugMode) debugPrint('✅ Loaded ${_days.length} days from Hive');
 
         // Debug: Print exercises in each day
@@ -106,11 +179,11 @@ class ExerciseProvider with ChangeNotifier {
 
       // Load extra exercises with error handling
       _extraExercises.clear();
-      for (var key in _extraBox.keys) {
+      for (var key in _extraBox!.keys) {
         try {
           final dateStr = key as String;
           final date = DateTime.parse(dateStr);
-          final rawList = _extraBox.get(key);
+          final rawList = _extraBox!.get(key);
 
           if (rawList is List) {
             final exercisesList = rawList.cast<Exercise>();
@@ -118,7 +191,7 @@ class ExerciseProvider with ChangeNotifier {
             if (kDebugMode) debugPrint('  Loaded ${exercisesList.length} exercises for $dateStr');
           }
         } catch (e) {
-          if (kDebugMode) debugPrint(' Error loading exercises for key $key: $e');
+          if (kDebugMode) debugPrint('⚠️ Error loading exercises for key $key: $e');
           continue;
         }
       }
@@ -154,24 +227,31 @@ class ExerciseProvider with ChangeNotifier {
 
   Future<void> _checkAndMigrate() async {
     try {
-      final savedVersion = _settingsBox.get('version', defaultValue: 0);
+      if (_settingsBox == null) return; // 🔥 NEW: Null check
+      final savedVersion = _settingsBox!.get('version', defaultValue: 0); // 🔥 CHANGED: Added !
 
       if (savedVersion < currentVersion) {
         await _migrateData(savedVersion, currentVersion);
-        await _settingsBox.put('version', currentVersion);
+        await _settingsBox!.put('version', currentVersion); // 🔥 CHANGED: Added !
       }
     } catch (e) {
-      print('Migration error: $e');
+      if(kDebugMode) {
+        print('Migration error: $e');
+      }
     }
   }
 
   Future<void> _migrateData(int from, int to) async {
-    print('Migrating data from version $from to $to');
+    if (kDebugMode) {
+      print('Migrating data from version $from to $to');
+    }
 
     // Add migration logic here for future versions
     if (from == 0 && to == 1) {
       // Example: Add new fields, transform data, etc.
-      print('Migration v0 -> v1 completed');
+      if (kDebugMode) {
+        print('Migration v0 -> v1 completed');
+      }
     }
   }
 
@@ -179,30 +259,36 @@ class ExerciseProvider with ChangeNotifier {
 
   Future<bool> _saveDays() async {
     try {
-      await _daysBox.clear();
+      if (_daysBox == null) return false; // 🔥 NEW: Null check
+      await _daysBox!.clear(); // 🔥 CHANGED: Added !
       for (int i = 0; i < _days.length; i++) {
-        await _daysBox.put(i, _days[i]);
+        await _daysBox!.put(i, _days[i]); // 🔥 CHANGED: Added !
       }
       return true;
     } catch (e) {
       _lastError = 'Error saving days: $e';
-      print(_lastError);
+      if (kDebugMode) {
+        print(_lastError);
+      }
       return false;
     }
   }
 
   Future<bool> _saveExtraExercises(DateTime date) async {
     try {
+      if (_extraBox == null) return false; // 🔥 NEW: Null check
       final key = _dateToString(date);
       if (_extraExercises[date]?.isEmpty ?? true) {
-        await _extraBox.delete(key);
+        await _extraBox!.delete(key); // 🔥 CHANGED: Added !
       } else {
-        await _extraBox.put(key, _extraExercises[date]);
+        await _extraBox!.put(key, _extraExercises[date]); // 🔥 CHANGED: Added !
       }
       return true;
     } catch (e) {
       _lastError = 'Error saving exercises: $e';
-      print(_lastError);
+      if (kDebugMode) {
+        print(_lastError);
+      }
       return false;
     }
   }
@@ -297,23 +383,29 @@ class ExerciseProvider with ChangeNotifier {
       return success;
     } catch (e) {
       _lastError = 'Error adding exercise: $e';
-      print(_lastError);
+      if (kDebugMode) {
+        print(_lastError);
+      }
       return false;
     }
   }
 
   List<Exercise> getExercisesForDate(DateTime date) {
     final key = DateTime(date.year, date.month, date.day);
-    final metaBox = Hive.box(HiveConfig.metaBox);
-    final completedAtStr = metaBox.get('extra_${_dateToString(date)}');
 
-    if (completedAtStr != null) {
-      final completedAt = DateTime.parse(completedAtStr);
-      final diff = DateTime.now().difference(completedAt);
+    // 🔥 CHANGED: Use user-specific metaBox
+    if (_currentUserId != null && Hive.isBoxOpen(HiveConfig.metaBox(_currentUserId!))) {
+      final metaBox = Hive.box(HiveConfig.metaBox(_currentUserId!));
+      final completedAtStr = metaBox.get('extra_${_dateToString(date)}');
 
-      if (diff.inHours >= 12) {
-        resetExtraExercises(date);
-        metaBox.delete('extra_${_dateToString(date)}');
+      if (completedAtStr != null) {
+        final completedAt = DateTime.parse(completedAtStr);
+        final diff = DateTime.now().difference(completedAt);
+
+        if (diff.inHours >= 12) {
+          resetExtraExercises(date);
+          metaBox.delete('extra_${_dateToString(date)}');
+        }
       }
     }
 
@@ -359,7 +451,9 @@ class ExerciseProvider with ChangeNotifier {
       return success;
     } catch (e) {
       _lastError = 'Error updating set: $e';
-      print(_lastError);
+      if (kDebugMode) {
+        print(_lastError);
+      }
       return false;
     }
   }
@@ -390,7 +484,9 @@ class ExerciseProvider with ChangeNotifier {
       return success;
     } catch (e) {
       _lastError = 'Error adding set: $e';
-      print(_lastError);
+      if (kDebugMode) {
+        print(_lastError);
+      }
       return false;
     }
   }
@@ -420,7 +516,9 @@ class ExerciseProvider with ChangeNotifier {
       return success;
     } catch (e) {
       _lastError = 'Error removing set: $e';
-      print(_lastError);
+      if (kDebugMode) {
+        print(_lastError);
+      }
       return false;
     }
   }
@@ -447,7 +545,9 @@ class ExerciseProvider with ChangeNotifier {
       return success;
     } catch (e) {
       _lastError = 'Error removing exercise: $e';
-      print(_lastError);
+      if (kDebugMode) {
+        print(_lastError);
+      }
       return false;
     }
   }
@@ -464,7 +564,9 @@ class ExerciseProvider with ChangeNotifier {
       return success;
     } catch (e) {
       _lastError = 'Error clearing exercises: $e';
-      print(_lastError);
+      if (kDebugMode) {
+        print(_lastError);
+      }
       return false;
     }
   }
@@ -558,16 +660,19 @@ class ExerciseProvider with ChangeNotifier {
 
   List<Exercise> getExercisesForDay(String dayName) {
     try {
-      final metaBox = Hive.box(HiveConfig.metaBox);
-      final completedAtStr = metaBox.get('${dayName}_completedAt');
+      // 🔥 CHANGED: Use user-specific metaBox
+      if (_currentUserId != null && Hive.isBoxOpen(HiveConfig.metaBox(_currentUserId!))) {
+        final metaBox = Hive.box(HiveConfig.metaBox(_currentUserId!));
+        final completedAtStr = metaBox.get('${dayName}_completedAt');
 
-      if (completedAtStr != null) {
-        final completedAt = DateTime.parse(completedAtStr);
-        final diff = DateTime.now().difference(completedAt);
+        if (completedAtStr != null) {
+          final completedAt = DateTime.parse(completedAtStr);
+          final diff = DateTime.now().difference(completedAt);
 
-        if (diff.inHours >= 12) {
-          resetDayExercises(dayName);
-          metaBox.delete('${dayName}_completedAt');
+          if (diff.inHours >= 12) {
+            resetDayExercises(dayName);
+            metaBox.delete('${dayName}_completedAt');
+          }
         }
       }
 
@@ -599,7 +704,9 @@ class ExerciseProvider with ChangeNotifier {
       return success;
     } catch (e) {
       _lastError = 'Error removing day exercise: $e';
-      print(_lastError);
+      if (kDebugMode) {
+        print(_lastError);
+      }
       return false;
     }
   }
@@ -627,7 +734,9 @@ class ExerciseProvider with ChangeNotifier {
       return success;
     } catch (e) {
       _lastError = 'Error adding set to day exercise: $e';
-      print(_lastError);
+      if (kDebugMode) {
+        print(_lastError);
+      }
       return false;
     }
   }
@@ -654,7 +763,9 @@ class ExerciseProvider with ChangeNotifier {
       return success;
     } catch (e) {
       _lastError = 'Error removing set from day exercise: $e';
-      print(_lastError);
+      if (kDebugMode) {
+        print(_lastError);
+      }
       return false;
     }
   }
@@ -737,7 +848,9 @@ class ExerciseProvider with ChangeNotifier {
       return success;
     } catch (e) {
       _lastError = 'Error updating day exercise set: $e';
-      print(_lastError);
+      if (kDebugMode) {
+        print(_lastError);
+      }
       return false;
     }
   }
@@ -820,25 +933,27 @@ class ExerciseProvider with ChangeNotifier {
       return data;
     } catch (e) {
       _lastError = 'Error exporting data: $e';
-      print(_lastError);
+      if (kDebugMode) {
+        print(_lastError);
+      }
       return {};
     }
   }
 
-  Future<bool> clearAllData() async {
-    try {
-      await _daysBox.clear();
-      await _extraBox.clear();
-      _initializeDefaultState();
-      await _saveDays();
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _lastError = 'Error clearing data: $e';
-      print(_lastError);
-      return false;
-    }
-  }
+  // Future<bool> clearAllData() async {
+  //   try {
+  //     await _daysBox.clear();
+  //     await _extraBox.clear();
+  //     _initializeDefaultState();
+  //     await _saveDays();
+  //     notifyListeners();
+  //     return true;
+  //   } catch (e) {
+  //     _lastError = 'Error clearing data: $e';
+  //     print(_lastError);
+  //     return false;
+  //   }
+  // }
 
   // ================= UTILITY =================
 
@@ -908,10 +1023,16 @@ class ExerciseProvider with ChangeNotifier {
     String? notes,
   }) async {
     try {
+      if (_workoutLogsBox == null) {
+        _lastError = 'Workout log box not initialized';
+        return false;
+      }
+
+
       final todayKey = _dateToString(date);
 
       //  Get existing logs of today
-      final existingLogs = _workoutLogsBox.values
+      final existingLogs = _workoutLogsBox!.values // 🔥 CHANGED: Added !
           .where((log) => _dateToString(log.date) == todayKey)
           .toList();
 
@@ -967,7 +1088,7 @@ class ExerciseProvider with ChangeNotifier {
         notes: notes,
       );
 
-      await _workoutLogsBox.put(key, log);
+      await _workoutLogsBox!.put(key, log); // 🔥 CHANGED: Added !
       notifyListeners();
       return true;
     } catch (e) {
@@ -986,17 +1107,19 @@ class ExerciseProvider with ChangeNotifier {
   }
 
   List<WorkoutLog> getWorkoutLogsForDate(DateTime date) {
+    if (_workoutLogsBox == null) return []; // 🔥 NEW: Null check
     final dateStr = _dateToString(date);
-    return _workoutLogsBox.values
+    return _workoutLogsBox!.values // 🔥 CHANGED: Added !
         .where((log) => _dateToString(log.date) == dateStr)
         .toList()
       ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
   }
 
   List<DateTime> getAllWorkoutLogDates() {
+    if (_workoutLogsBox == null) return []; // 🔥 NEW: Null check
     final dates = <DateTime>{};
 
-    for (var log in _workoutLogsBox.values) {
+    for (var log in _workoutLogsBox!.values) { // 🔥 CHANGED: Added !
       dates.add(DateTime(log.date.year, log.date.month, log.date.day));
     }
 
@@ -1004,9 +1127,10 @@ class ExerciseProvider with ChangeNotifier {
   }
 
   List<CompletedExercise> getExerciseHistory(String exerciseId) {
+    if (_workoutLogsBox == null) return []; // 🔥 NEW: Null check
     final history = <CompletedExercise>[];
 
-    for (var log in _workoutLogsBox.values) {
+    for (var log in _workoutLogsBox!.values) { // 🔥 CHANGED: Added !
       for (var exercise in log.exercises) {
         if (exercise.exerciseId == exerciseId) {
           history.add(exercise);
@@ -1018,7 +1142,7 @@ class ExerciseProvider with ChangeNotifier {
     return history;
   }
 
-  int get totalWorkoutLogs => _workoutLogsBox.length;
+  int get totalWorkoutLogs => _workoutLogsBox?.length ?? 0; // 🔥 CHANGED: Added null safety
 
   int getWorkoutStreak() {
     final dates = getAllWorkoutLogDates();
@@ -1041,12 +1165,15 @@ class ExerciseProvider with ChangeNotifier {
 
     return streak;
   }
-       //  reset exercises section
+  //  reset exercises section
 
   // for day exercise
   Future<void> markWorkoutCompleted(String dayName) async {
-    final metaBox = Hive.box(HiveConfig.metaBox);
-    await metaBox.put('${dayName}_completedAt', DateTime.now().toIso8601String());
+    // 🔥 CHANGED: Use user-specific metaBox
+    if (_currentUserId != null) {
+      final metaBox = await Hive.openBox(HiveConfig.metaBox(_currentUserId!));
+      await metaBox.put('${dayName}_completedAt', DateTime.now().toIso8601String());
+    }
   }
 
 
@@ -1074,12 +1201,15 @@ class ExerciseProvider with ChangeNotifier {
     }
   }
 
-    // for extra exercise
+  // for extra exercise
 
   Future<void> markExtraWorkoutCompleted(DateTime date) async {
-    final metaBox = Hive.box(HiveConfig.metaBox);
-    final key = _dateToString(date);
-    await metaBox.put('extra_$key', DateTime.now().toIso8601String());
+    // 🔥 CHANGED: Use user-specific metaBox
+    if (_currentUserId != null) {
+      final metaBox = await Hive.openBox(HiveConfig.metaBox(_currentUserId!));
+      final key = _dateToString(date);
+      await metaBox.put('extra_$key', DateTime.now().toIso8601String());
+    }
   }
 
 
@@ -1113,6 +1243,7 @@ class ExerciseProvider with ChangeNotifier {
 
 
 
+  @override
   void dispose() {
     // Don't close boxes here - they might be used elsewhere
     super.dispose();

@@ -4,7 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../services/api_service.dart';
 import '../main.dart';
 
-/// 🔥 COMPLETE FIX: Ensures UI updates immediately after registration
+/// AuthProvider - ONLY manages authentication
 class AuthProvider extends ChangeNotifier {
   final Box _authBox = Hive.box(HiveConfig.authBox);
 
@@ -32,6 +32,7 @@ class AuthProvider extends ChangeNotifier {
   String? get username => _user?['username'];
   String? get email => _user?['email'];
   String? get phone => _user?['phone'];
+  String? get userId => _user?['id']; // 🔥 NEW: Provide userId to other providers
 
   bool get isLocked => _isLocked;
   int get remainingSeconds => _remainingSeconds;
@@ -74,7 +75,6 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _restoreAuthState() async {
     try {
-      // Read from ApiService's keys
       final storedToken = _authBox.get('auth_token');
       final storedUser = _authBox.get('user_data');
 
@@ -90,7 +90,7 @@ class AuthProvider extends ChangeNotifier {
         _isLoggedIn = true;
 
         if (kDebugMode) {
-          debugPrint('🔐 Restored login: ${_user!['username']}');
+          debugPrint('🔐 Restored login: ${_user!['username']} (ID: ${_user!['id']})');
         }
       } else {
         _isLoggedIn = false;
@@ -116,7 +116,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // 🔥 NEW: Force reload from Hive storage
   Future<void> _reloadFromStorage() async {
     try {
       final storedToken = _authBox.get('auth_token');
@@ -126,9 +125,6 @@ class AuthProvider extends ChangeNotifier {
         debugPrint('🔄 Reloading from storage...');
         debugPrint('   Token exists: ${storedToken != null}');
         debugPrint('   User exists: ${storedUser != null}');
-        if (storedUser != null) {
-          debugPrint('   User data: $storedUser');
-        }
       }
 
       if (storedToken != null && storedUser != null) {
@@ -137,7 +133,7 @@ class AuthProvider extends ChangeNotifier {
         _isLoggedIn = true;
 
         if (kDebugMode) {
-          debugPrint('✅ Reloaded: ${_user!['username']}');
+          debugPrint('✅ Reloaded: ${_user!['username']} (ID: ${_user!['id']})');
         }
 
         notifyListeners();
@@ -230,70 +226,69 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _clearLockFromStorage() async {
     await _authBox.delete('lockUntil');
-    if (kDebugMode) debugPrint(' Cleared lock from storage');
+    if (kDebugMode) debugPrint('🗑️ Cleared lock from storage');
   }
 
-
-  /// Clear all user data from Hive storage (on account deletion)
+  // 🔥 CHANGED: Delete user-specific boxes from disk
   Future<void> _clearAllUserData() async {
     try {
       if (kDebugMode) {
-        debugPrint('🗑️ Starting complete data wipe...');
+        debugPrint('🗑️ Deleting all user data...');
       }
 
-      // 1. Reset memory variables first
+      // Get user ID before clearing auth
+      final uid = _user?['id'];
+
+      // Reset memory variables
       _token = null;
       _user = null;
       _isLoggedIn = false;
       _error = null;
 
-      // 2. List of all boxes to clear (using HiveConfig constants)
-      final boxesToClear = [
-        HiveConfig.authBox,
-        HiveConfig.workoutDaysBox,
-        HiveConfig.extraExercisesBox,
-        HiveConfig.settingsBox,
-        HiveConfig.workoutLogsBox,
-        HiveConfig.metaBox,
-      ];
+      // Clear auth box
+      await _authBox.delete('auth_token');
+      await _authBox.delete('user_data');
 
-      // 3. Clear each box with proper error handling
-      for (String boxName in boxesToClear) {
-        try {
-          if (Hive.isBoxOpen(boxName)) {
-            // Box is already open - just clear it
-            await Hive.box(boxName).clear();
-            if (kDebugMode) {
-              debugPrint('   ✅ Cleared: $boxName');
+      // 🔥 NEW: Delete user-specific boxes from disk
+      if (uid != null) {
+        final boxNames = [
+          HiveConfig.workoutDaysBox(uid),
+          HiveConfig.extraExercisesBox(uid),
+          HiveConfig.settingsBox(uid),
+          HiveConfig.workoutLogsBox(uid),
+          HiveConfig.metaBox(uid),
+        ];
+
+        for (String boxName in boxNames) {
+          try {
+            // Close if open
+            if (Hive.isBoxOpen(boxName)) {
+              await Hive.box(boxName).close();
             }
-          } else {
-            // Box is closed - open, clear, then close
-            final box = await Hive.openBox(boxName);
-            await box.clear();
-            await box.close();
+
+            // Delete from disk
+            await Hive.deleteBoxFromDisk(boxName);
+
             if (kDebugMode) {
-              debugPrint('   ✅ Cleared & closed: $boxName');
+              debugPrint('   ✅ Deleted: $boxName');
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              debugPrint('   ⚠️ Error deleting $boxName: $e');
             }
           }
-        } catch (e) {
-          if (kDebugMode) {
-            debugPrint('   ⚠️ Error clearing $boxName: $e');
-          }
-          // Continue with other boxes even if one fails
+        }
+
+        if (kDebugMode) {
+          debugPrint('🔥 All user boxes deleted from device');
         }
       }
 
-      if (kDebugMode) {
-        debugPrint('🔥 ALL USER DATA WIPED FROM DEVICE');
-      }
-
-      // 4. Notify listeners
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ Critical error during data wipe: $e');
+        debugPrint('❌ Error deleting user data: $e');
       }
-      // Still notify listeners even if something failed
       notifyListeners();
     }
   }
@@ -339,7 +334,6 @@ class AuthProvider extends ChangeNotifier {
         _lockTimer = null;
         await _clearLockFromStorage();
 
-        // 🔥 Reload from Hive after ApiService saved
         await _reloadFromStorage();
 
         _setLoading(false);
@@ -357,7 +351,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// 🔥 FIXED: Register with immediate UI update
   Future<bool> register({
     required String username,
     required String email,
@@ -365,11 +358,9 @@ class AuthProvider extends ChangeNotifier {
     required String phone,
   }) async {
     if (kDebugMode) {
-      debugPrint('🔷 ==========================================');
       debugPrint('🔷 REGISTER called');
-      debugPrint('🔷 Username: $username');
-      debugPrint('🔷 Email: $email');
-      debugPrint('🔷 ==========================================');
+      debugPrint('   Username: $username');
+      debugPrint('   Email: $email');
     }
 
     _setLoading(true);
@@ -392,33 +383,18 @@ class AuthProvider extends ChangeNotifier {
           debugPrint('✅ Registration successful, reloading state...');
         }
 
-        // 🔥 CRITICAL FIX: Wait a tiny bit for ApiService to finish saving
         await Future.delayed(const Duration(milliseconds: 50));
-
-        // 🔥 CRITICAL FIX: Force reload from Hive
         await _reloadFromStorage();
 
-        // 🔥 CRITICAL FIX: Double-check the state is set
         if (kDebugMode) {
-          debugPrint('🔷 After reload:');
-          debugPrint('   _isLoggedIn: $_isLoggedIn');
-          debugPrint('   _user: $_user');
+          debugPrint('✅ REGISTRATION COMPLETE');
+          debugPrint('   isLoggedIn: $_isLoggedIn');
           debugPrint('   username: $username');
+          debugPrint('   userId: ${_user!['id']}');
         }
 
         _setLoading(false);
-
-        // 🔥 CRITICAL FIX: One more notify to be absolutely sure
         notifyListeners();
-
-        if (kDebugMode) {
-          debugPrint('✅ ==========================================');
-          debugPrint('✅ REGISTRATION COMPLETE');
-          debugPrint('✅ isLoggedIn: $_isLoggedIn');
-          debugPrint('✅ username: ${this.username}');
-          debugPrint('✅ ==========================================');
-        }
-
         return true;
       } else {
         _error = result['message'] ?? 'Registration failed';
@@ -434,6 +410,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // Logout - ONLY clears auth (ExerciseProvider will close its own boxes)
   Future<void> logout() async {
     await ApiService.logout();
 
@@ -447,7 +424,7 @@ class AuthProvider extends ChangeNotifier {
     await _clearAuthState();
 
     if (kDebugMode) {
-      debugPrint('🚪 User logged out');
+      debugPrint('🚪 User logged out (auth cleared)');
     }
   }
 
@@ -471,7 +448,6 @@ class AuthProvider extends ChangeNotifier {
       );
 
       if (result['success'] == true) {
-        // Reload from Hive after ApiService updates
         await _reloadFromStorage();
 
         if (kDebugMode) {
@@ -498,7 +474,6 @@ class AuthProvider extends ChangeNotifier {
       final result = await ApiService.getProfile();
 
       if (result['success'] == true) {
-        // Reload from Hive after ApiService updates
         await _reloadFromStorage();
 
         if (kDebugMode) {
@@ -510,22 +485,29 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-
-  /// Delete Account - Permanently remove all data
+  // Delete Account - Permanently remove all data
   Future<bool> deleteAccount(String password) async {
     _setLoading(true);
     _clearError();
 
     try {
-      // Call backend to delete account
+      if (kDebugMode) {
+        debugPrint('🗑️ Step 1: Calling backend to delete account...');
+      }
+
       final result = await ApiService.deleteAccount(password: password);
 
       if (result['success'] == true) {
-        // 🔥 WIPE EVERYTHING from device
+        if (kDebugMode) {
+          debugPrint('✅ Step 2: Backend deleted account');
+          debugPrint('🗑️ Step 3: Deleting local data...');
+        }
+
+        // Delete all user data
         await _clearAllUserData();
 
         if (kDebugMode) {
-          debugPrint('✅ Account deleted & all data wiped');
+          debugPrint('✅ Step 4: Account deletion complete');
         }
 
         _setLoading(false);
@@ -542,6 +524,7 @@ class AuthProvider extends ChangeNotifier {
       return false;
     }
   }
+
   void clearError() {
     _error = null;
     notifyListeners();
