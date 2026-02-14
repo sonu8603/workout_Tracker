@@ -437,7 +437,7 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
     );
   }
 
-  // 🔥 FIXED: Use isLoading from parameter
+
   Widget _buildModernButton(bool isLoading) {
     return Container(
       height: 56,
@@ -454,7 +454,7 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
           shadowColor: Colors.transparent,
         ),
         child: isLoading
-            ? const CircularProgressIndicator(color: Colors.white)
+            ? const CircularProgressIndicator(color: Color(0xFF673AB7))
             : const Text(
           "Create Account",
           style: TextStyle(

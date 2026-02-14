@@ -445,6 +445,36 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+
+  Future<bool> deleteAccount(String password) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final result = await ApiService.deleteAccount(password);
+
+      if (result['success'] == true) {
+        // 1. Wipe Hive completely
+        await _clearAuthState();
+
+        // 2. Explicitly reset the login flag
+        _isLoggedIn = false;
+        _token = null;
+        _user = null;
+
+        _setLoading(false); // This calls notifyListeners()
+        return true;
+      } else {
+        _error = result['message'] ?? 'Failed to delete account';
+        _setLoading(false);
+        return false;
+      }
+    } catch (e) {
+      _error = 'An error occurred. Please try again.';
+      _setLoading(false);
+      return false;
+    }
+  }
   void clearError() {
     _error = null;
     notifyListeners();

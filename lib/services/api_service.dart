@@ -5,11 +5,11 @@ import 'package:hive/hive.dart';
 import 'package:flutter/foundation.dart';
 
 import '../config/apiconfig.dart';
+import '../main.dart'; // 🔥 ADDED: For HiveConfig
 
 class ApiService {
-  static const String authBoxName = 'auth_data';
-
-  static Box get _authBox => Hive.box(authBoxName);
+  // 🔥 FIXED: Use same box as AuthProvider instead of 'auth_data'
+  static Box get _authBox => Hive.box(HiveConfig.authBox);
 
   static Future<void> saveToken(String token) async {
     await _authBox.put('auth_token', token);
@@ -25,11 +25,12 @@ class ApiService {
     if (kDebugMode) debugPrint('🔓 Token removed');
   }
 
-  // ✅ NEW: Check for token refresh in response headers
+  // 🔥 IMPROVED: Check both header cases for token refresh
   static Future<void> _checkAndRefreshToken(http.Response response) async {
     try {
-      // Check if backend sent a new token
-      final newToken = response.headers['x-new-token'];
+      // Check both case variations for compatibility
+      final newToken = response.headers['x-new-token'] ??
+          response.headers['X-New-Token'];
 
       if (newToken != null && newToken.isNotEmpty) {
         // Save new token
@@ -90,7 +91,6 @@ class ApiService {
 
       if (kDebugMode) debugPrint('📥 Status: ${response.statusCode}');
 
-      // ✅ Check for token refresh
       await _checkAndRefreshToken(response);
 
       final data = json.decode(response.body);
@@ -131,7 +131,6 @@ class ApiService {
     }
   }
 
-  // 🔥 PRODUCTION-READY LOGIN METHOD
   static Future<Map<String, dynamic>> login({
     required String identifier,
     required String password,
@@ -153,12 +152,10 @@ class ApiService {
         debugPrint('📥 Response: ${response.body}');
       }
 
-      // ✅ Check for token refresh
       await _checkAndRefreshToken(response);
 
       final data = json.decode(response.body);
 
-      // 🔥 PRODUCTION: Handle 423 Locked OR 429 Rate Limited
       if (response.statusCode == 423 || response.statusCode == 429) {
         if (data['lockUntil'] == null || data['remainingSeconds'] == null) {
           return {
@@ -187,8 +184,6 @@ class ApiService {
         };
       }
 
-
-      // Handle successful login
       if (response.statusCode == 200) {
         await saveToken(data['token']);
         await saveUserData(data['user']);
@@ -202,7 +197,6 @@ class ApiService {
         };
       }
 
-      // Handle other errors (401, 400, etc.)
       if (kDebugMode) {
         debugPrint('❌ Login failed: ${data['message']}');
       }
@@ -249,7 +243,6 @@ class ApiService {
 
       if (kDebugMode) debugPrint('📥 Status: ${response.statusCode}');
 
-      // ✅ Check for token refresh
       await _checkAndRefreshToken(response);
 
       final data = json.decode(response.body);
@@ -286,9 +279,6 @@ class ApiService {
     }
   }
 
-
-
-  /// Verify OTP (before password reset)
   static Future<Map<String, dynamic>> verifyOTP({
     required String email,
     required String otp,
@@ -307,7 +297,6 @@ class ApiService {
 
       if (kDebugMode) debugPrint('📥 Status: ${response.statusCode}');
 
-      // ✅ Check for token refresh
       await _checkAndRefreshToken(response);
 
       final data = json.decode(response.body);
@@ -343,9 +332,6 @@ class ApiService {
     }
   }
 
-
-
-  ///  Reset Password
   static Future<Map<String, dynamic>> resetPassword({
     required String email,
     required String newPassword,
@@ -364,7 +350,6 @@ class ApiService {
 
       if (kDebugMode) debugPrint('📥 Status: ${response.statusCode}');
 
-      // ✅ Check for token refresh
       await _checkAndRefreshToken(response);
 
       final data = json.decode(response.body);
@@ -395,7 +380,6 @@ class ApiService {
     }
   }
 
-  /// 🆕 Resend OTP (just calls forgotPassword again)
   static Future<Map<String, dynamic>> resendOTP({
     required String email,
   }) async {
@@ -424,7 +408,6 @@ class ApiService {
 
       if (kDebugMode) debugPrint('📥 Profile Status: ${response.statusCode}');
 
-      // ✅ Check for token refresh (IMPORTANT!)
       await _checkAndRefreshToken(response);
 
       final data = json.decode(response.body);
@@ -453,7 +436,6 @@ class ApiService {
     } catch (e) {
       if (kDebugMode) debugPrint('🔴 Profile fetch error: $e');
 
-      // Return cached data if available
       final cachedData = getUserData();
       if (cachedData != null) {
         if (kDebugMode) debugPrint('📦 Returning cached data');
@@ -506,7 +488,6 @@ class ApiService {
         body: json.encode(updateData),
       ).timeout(const Duration(seconds: 10));
 
-      // ✅ Check for token refresh (IMPORTANT!)
       await _checkAndRefreshToken(response);
 
       final data = json.decode(response.body);
@@ -559,7 +540,6 @@ class ApiService {
         body: json.encode({'profileImage': imageUrl}),
       ).timeout(const Duration(seconds: 15));
 
-      // ✅ Check for token refresh (IMPORTANT!)
       await _checkAndRefreshToken(response);
 
       final data = json.decode(response.body);
@@ -591,8 +571,26 @@ class ApiService {
     }
   }
 
+
+  static Future<Map<String, dynamic>> deleteAccount(String password) async {
+    try {
+      final token = getToken();
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/user/account'), // Check your exact route
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'password': password}),
+      );
+
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': 'Network error'};
+    }
+  }
+
   static Future<void> logout() async {
-    // ✅ Call backend logout endpoint for token blacklisting
     try {
       final token = getToken();
       if (token != null) {
@@ -608,10 +606,8 @@ class ApiService {
       }
     } catch (e) {
       if (kDebugMode) debugPrint('⚠️ Backend logout failed: $e');
-      // Continue with local logout even if backend fails
     }
 
-    // Clear local data
     await _authBox.clear();
     if (kDebugMode) debugPrint('🚪 Logged out');
   }

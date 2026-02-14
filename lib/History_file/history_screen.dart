@@ -24,8 +24,17 @@ class HistoryWorkoutLogsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('History'),
+        title: const Text("History"),
+        automaticallyImplyLeading: false,
+        leading: (ModalRoute.of(context)?.canPop ?? false)
+            ? IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 22),
+          onPressed: () => Navigator.pop(context),
+        )
+            : null,
         backgroundColor: Colors.deepPurple,
+
+
       ),
       body: ValueListenableBuilder<Box<WorkoutLog>>(
         valueListenable: box.listenable(),
