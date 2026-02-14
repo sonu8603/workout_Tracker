@@ -572,21 +572,55 @@ class ApiService {
   }
 
 
-  static Future<Map<String, dynamic>> deleteAccount(String password) async {
+  static Future<Map<String, dynamic>> deleteAccount({
+    required String password,  // ← Named parameter with curly braces
+  }) async {
     try {
       final token = getToken();
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Not authenticated',
+        };
+      }
+
+      if (kDebugMode) debugPrint('🔵 Deleting account permanently...');
+
       final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/user/account'), // Check your exact route
+        Uri.parse('${ApiConfig.baseUrl}/user/account'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({'password': password}),
-      );
+        body: json.encode({'password': password}),
+      ).timeout(const Duration(seconds: 10));
 
-      return jsonDecode(response.body);
+      if (kDebugMode) debugPrint('📥 Status: ${response.statusCode}');
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Account deleted successfully',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to delete account',
+        };
+      }
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Connection timeout. Please try again.',
+      };
     } catch (e) {
-      return {'success': false, 'message': 'Network error'};
+      if (kDebugMode) debugPrint('🔴 Error: $e');
+      return {
+        'success': false,
+        'message': 'Network error. Please try again.',
+      };
     }
   }
 

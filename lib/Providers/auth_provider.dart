@@ -230,7 +230,72 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _clearLockFromStorage() async {
     await _authBox.delete('lockUntil');
-    if (kDebugMode) debugPrint('🗑️ Cleared lock from storage');
+    if (kDebugMode) debugPrint(' Cleared lock from storage');
+  }
+
+
+  /// Clear all user data from Hive storage (on account deletion)
+  Future<void> _clearAllUserData() async {
+    try {
+      if (kDebugMode) {
+        debugPrint('🗑️ Starting complete data wipe...');
+      }
+
+      // 1. Reset memory variables first
+      _token = null;
+      _user = null;
+      _isLoggedIn = false;
+      _error = null;
+
+      // 2. List of all boxes to clear (using HiveConfig constants)
+      final boxesToClear = [
+        HiveConfig.authBox,
+        HiveConfig.workoutDaysBox,
+        HiveConfig.extraExercisesBox,
+        HiveConfig.settingsBox,
+        HiveConfig.workoutLogsBox,
+        HiveConfig.metaBox,
+      ];
+
+      // 3. Clear each box with proper error handling
+      for (String boxName in boxesToClear) {
+        try {
+          if (Hive.isBoxOpen(boxName)) {
+            // Box is already open - just clear it
+            await Hive.box(boxName).clear();
+            if (kDebugMode) {
+              debugPrint('   ✅ Cleared: $boxName');
+            }
+          } else {
+            // Box is closed - open, clear, then close
+            final box = await Hive.openBox(boxName);
+            await box.clear();
+            await box.close();
+            if (kDebugMode) {
+              debugPrint('   ✅ Cleared & closed: $boxName');
+            }
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint('   ⚠️ Error clearing $boxName: $e');
+          }
+          // Continue with other boxes even if one fails
+        }
+      }
+
+      if (kDebugMode) {
+        debugPrint('🔥 ALL USER DATA WIPED FROM DEVICE');
+      }
+
+      // 4. Notify listeners
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Critical error during data wipe: $e');
+      }
+      // Still notify listeners even if something failed
+      notifyListeners();
+    }
   }
 
   // ================= PUBLIC API =================
@@ -446,23 +511,24 @@ class AuthProvider extends ChangeNotifier {
   }
 
 
+  /// Delete Account - Permanently remove all data
   Future<bool> deleteAccount(String password) async {
     _setLoading(true);
     _clearError();
 
     try {
-      final result = await ApiService.deleteAccount(password);
+      // Call backend to delete account
+      final result = await ApiService.deleteAccount(password: password);
 
       if (result['success'] == true) {
-        // 1. Wipe Hive completely
-        await _clearAuthState();
+        // 🔥 WIPE EVERYTHING from device
+        await _clearAllUserData();
 
-        // 2. Explicitly reset the login flag
-        _isLoggedIn = false;
-        _token = null;
-        _user = null;
+        if (kDebugMode) {
+          debugPrint('✅ Account deleted & all data wiped');
+        }
 
-        _setLoading(false); // This calls notifyListeners()
+        _setLoading(false);
         return true;
       } else {
         _error = result['message'] ?? 'Failed to delete account';
@@ -470,7 +536,8 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _error = 'An error occurred. Please try again.';
+      _error = 'Network error. Please try again.';
+      if (kDebugMode) debugPrint('❌ Delete account error: $e');
       _setLoading(false);
       return false;
     }

@@ -23,10 +23,13 @@ class SetUpRouteinDays extends StatelessWidget {
           ],
         ),
         backgroundColor: Colors.deepPurple,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 23),
+        automaticallyImplyLeading: false,
+        leading: (ModalRoute.of(context)?.canPop ?? false)
+            ? IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 22),
           onPressed: () => Navigator.pop(context),
-        ),
+        )
+            : null,
       ),
       body: Column(
         children: [
