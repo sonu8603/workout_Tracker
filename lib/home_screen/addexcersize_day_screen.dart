@@ -70,52 +70,75 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
   }
 
   //  Edit Exercise Name Dialog
-  void _showEditDialog(BuildContext context, ExerciseProvider provider, String currentName, int index) {
+  void _showEditDialog(BuildContext parentContext, ExerciseProvider provider, String currentName, int index) {
     final TextEditingController editController = TextEditingController(text: currentName);
 
     showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Edit Exercise Name"),
-        content: TextField(
-          controller: editController,
-          decoration: const InputDecoration(
-            labelText: "Exercise Name",
-            border: OutlineInputBorder(),
-            prefixIcon: Icon(Icons.fitness_center),
-          ),
-          textCapitalization: TextCapitalization.words,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              editController.dispose();
-              Navigator.pop(ctx);
-            },
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final newName = editController.text.trim();
-              if (newName.isNotEmpty && newName != currentName) {
-                provider.updateExerciseName(widget.day, index, newName);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text("Updated to: $newName"),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-              editController.dispose();
-              Navigator.pop(ctx);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepPurple,
+      context: parentContext,
+      barrierDismissible: false,  // 🔥 Prevent accidental dismissal
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text("Edit Exercise Name"),
+          content: TextField(
+            controller: editController,
+            decoration: const InputDecoration(
+              labelText: "Exercise Name",
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.fitness_center),
             ),
-            child: const Text("Update"),
+            textCapitalization: TextCapitalization.words,
+            autofocus: true,
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newName = editController.text.trim();
+
+                // 🔥 STEP 1: Close dialog IMMEDIATELY
+                Navigator.of(dialogContext).pop();
+
+                // 🔥 STEP 2: Wait a tiny bit for dialog to close
+                await Future.delayed(const Duration(milliseconds: 100));
+
+                // 🔥 STEP 3: NOW update (which triggers notifyListeners)
+                if (newName.isNotEmpty && newName != currentName) {
+                  provider.updateExerciseName(widget.day, index, newName);
+
+
+                  if (parentContext.mounted) {
+                    ScaffoldMessenger.of(parentContext).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          "Updated to: $newName",
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        backgroundColor: Colors.green,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                }
+
+                // 🔥 STEP 5: Dispose controller
+                editController.dispose();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+              ),
+              child: const Text(
+                "Update",
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

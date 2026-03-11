@@ -50,8 +50,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // ================= INIT =================
-
   AuthProvider() {
     _restoreAuthState();
   }
@@ -62,7 +60,6 @@ class AuthProvider extends ChangeNotifier {
     super.dispose();
   }
 
-  // ================= CORE HELPERS =================
 
   void _setLoading(bool value) {
     _isLoading = value;
@@ -293,8 +290,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // ================= PUBLIC API =================
-
   Future<bool> login(String identifier, String password) async {
     _setLoading(true);
     _clearError();
@@ -305,9 +300,19 @@ class AuthProvider extends ChangeNotifier {
         password: password,
       );
 
-      if (kDebugMode) debugPrint('📥 Login result: $result');
+      if (kDebugMode) {
+        debugPrint('📥 ===== LOGIN RESULT =====');
+        debugPrint('   success: ${result['success']}');
+        debugPrint('   message: ${result['message']}');
+        debugPrint('   code: ${result['code']}');
+        debugPrint('   attemptsLeft: ${result['attemptsLeft']}');
+        debugPrint('   lockUntil: ${result['lockUntil']}');
+        debugPrint('==========================');
+      }
 
-      if (result['code'] == 'ACCOUNT_LOCKED' || (result['success'] == false && result['lockUntil'] != null)) {
+      // 1️⃣ Check for account lock
+      if (result['code'] == 'ACCOUNT_LOCKED' ||
+          (result['success'] == false && result['lockUntil'] != null)) {
         _isLocked = true;
         _remainingSeconds = result['remainingSeconds'] ?? 0;
 
@@ -326,6 +331,7 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
 
+      // 2️⃣ Check for login success
       if (result['success'] == true) {
         _isLocked = false;
         _remainingSeconds = 0;
@@ -338,14 +344,25 @@ class AuthProvider extends ChangeNotifier {
 
         _setLoading(false);
         return true;
-      } else {
-        _error = result['message'] ?? 'Login failed';
-        _setLoading(false);
-        return false;
       }
+
+      // 3️⃣ Login failed - Show error with attempts remaining
+      // 🔥 FIX: Just use the backend message (it already includes attempts)
+      _error = result['message'] ?? 'Login failed';
+
+      if (kDebugMode) {
+        debugPrint('❌ Login failed: $_error');
+        if (result['attemptsLeft'] != null) {
+          debugPrint('   Attempts left: ${result['attemptsLeft']}');
+        }
+      }
+
+      _setLoading(false);
+      return false;
+
     } catch (e) {
       _error = 'Network error. Please try again.';
-      if (kDebugMode) debugPrint('Login error: $e');
+      if (kDebugMode) debugPrint('❌ Login error: $e');
       _setLoading(false);
       return false;
     }

@@ -34,7 +34,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  // ================= CORE LOGIC =================
+
 
   Future<void> _updateUsername(String newUsername) async {
     if (newUsername.isEmpty) return;
@@ -78,7 +78,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-  // 🔥 NEW: Delete Account Logic
+
   Future<void> _handleDeleteAccount(String password) async {
     if (password.isEmpty) {
       _showMessage('Password required', isError: true);
@@ -98,7 +98,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         setState(() => _isLoading = false);
 
         if (mounted) {
-          // 2. Direct Navigation: Type-safe and guaranteed to work
+
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
@@ -119,26 +119,47 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-
-  // ================= DIALOGS =================
-
   void _showEditUsernameDialog(String current) {
     final controller = TextEditingController(text: current);
+    final formKey = GlobalKey<FormState>();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('New Username'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: "Enter username"),
-          autofocus: true,
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: controller,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: "Enter username",
+              helperText: "No spaces allowed",
+              // 🔥 Isse helper text bada aur clear dikhega
+              helperStyle: const TextStyle(
+                fontSize: 14,             // Pehle se bada size
+                fontWeight: FontWeight.w500, // Thoda bold
+                color: Colors.blueGrey,    // Professional color
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) return "Required";
+              if (value.contains(' ')) return "Space is not allowed";
+              return null;
+            },
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
-              _updateUsername(controller.text.trim());
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(context);
+                _updateUsername(controller.text.trim());
+              }
             },
             child: const Text('Save'),
           ),
@@ -193,7 +214,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  // ================= UI BUILD =================
+  // UI BUILD
 
   @override
   Widget build(BuildContext context) {
@@ -214,70 +235,85 @@ class _EditProfilePageState extends State<EditProfilePage> {
             style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                _buildProfileHeader(currentUsername, authProvider.email ?? '', photoUrl),
-                const SizedBox(height: 30),
-                const Divider(height: 1, thickness: 1),
-                const SizedBox(height: 10),
-
-                // Edit Username
-                _buildSettingTile(
-                  title: "Edit Username",
-                  icon: Icons.person,
-                  iconColor: Colors.blue,
-                  onTap: () => _showEditUsernameDialog(currentUsername),
-                ),
-
-                const SizedBox(height: 15),
-
-                // Change Password
-                _buildSettingTile(
-                  title: "Change Password",
-                  icon: Icons.lock,
-                  iconColor: Colors.deepPurple,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ChangePasswordPage()),
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                // Danger Zone Section
-                const Row(
-                  children: [
-                    Expanded(child: Divider()),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      child: Text("DANGER ZONE",
-                          style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                    ),
-                    Expanded(child: Divider()),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
-                _buildSettingTile(
-                  title: "Delete Account",
-                  icon: Icons.delete_forever,
-                  iconColor: Colors.red,
-                  onTap: _showDeleteDangerDialog,
-                  textColor: Colors.red,
-                ),
-              ],
-            ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFF3F0FF),
+              Color(0xFFF8F9FA),
+              Colors.white,
+            ],
           ),
-          if (_isLoading)
-            Container(
-              color: Colors.black26,
-              child: const Center(child: CircularProgressIndicator()),
+        ),
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  _buildProfileHeader(currentUsername, authProvider.email ?? '', photoUrl),
+                  const SizedBox(height: 30),
+                  const Divider(height: 1, thickness: 1),
+                  const SizedBox(height: 10),
+
+                  // Edit Username
+                  _buildSettingTile(
+                    title: "Edit Username",
+                    icon: Icons.person,
+                    iconColor: Colors.blue,
+                    onTap: () => _showEditUsernameDialog(currentUsername),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  // Change Password
+                  _buildSettingTile(
+                    title: "Change Password",
+                    icon: Icons.lock,
+                    iconColor: Colors.deepPurple,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ChangePasswordPage()),
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // Danger Zone Section
+                  const Row(
+                    children: [
+                      Expanded(child: Divider()),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10),
+                        child: Text("DANGER ZONE",
+                            style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                      ),
+                      Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  _buildSettingTile(
+                    title: "Delete Account",
+                    icon: Icons.delete_forever,
+                    iconColor: Colors.red,
+                    onTap: _showDeleteDangerDialog,
+                    textColor: Colors.red,
+                  ),
+                ],
+              ),
             ),
-        ],
+            if (_isLoading)
+              Container(
+                color: Colors.black26,
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+          ],
+        ),
       ),
     );
   }

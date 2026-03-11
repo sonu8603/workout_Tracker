@@ -13,12 +13,12 @@ import 'models/workout_log_model.dart';
 import 'Providers/Excercise_provider.dart';
 import 'Providers/auth_provider.dart';
 
-// 🔥 CHANGED: Updated HiveConfig for user-specific boxes
+
 class HiveConfig {
-  // Shared box (for auth only)
+
   static const String authBox = 'auth_data';
 
-  // 🔥 NEW: User-specific box name generators
+  //   User-specific box name generators
   static String workoutDaysBox(String userId) => '${userId}_workouts';
   static String extraExercisesBox(String userId) => '${userId}_extras';
   static String settingsBox(String userId) => '${userId}_settings';

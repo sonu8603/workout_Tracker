@@ -225,15 +225,27 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
                           ),
                         ),
                         const SizedBox(height: 30),
+
                         _buildModernTextField(
                           controller: _nameController,
-                          label: "Full Name",
-                          hint: "Enter your full name",
+                          label: " Username",
+                          hint: "Enter your username",
                           icon: Icons.person_outline,
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return "Please enter your full name";
+                              return "Please enter your username";
                             }
+
+
+                            if (value.contains(' ')) {
+                              return "Username should not contain space";
+                            }
+
+
+                            if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value)) {
+                              return "Only letters, numbers and underscores are allowed";
+                            }
+
                             if (value.trim().length < 3) {
                               return "Name must be at least 3 characters";
                             }
@@ -298,18 +310,18 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
                             Expanded(child: Divider(color: Colors.grey.shade300)),
                           ],
                         ),
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _buildSocialButton(Icons.g_mobiledata, Colors.red),
-                            const SizedBox(width: 16),
-                            _buildSocialButton(Icons.apple, Colors.black),
-                            const SizedBox(width: 16),
-                            _buildSocialButton(Icons.facebook, Colors.blue),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
+                        // const SizedBox(height: 24),
+                        // Row(
+                        //   mainAxisAlignment: MainAxisAlignment.center,
+                        //   children: [
+                        //     _buildSocialButton(Icons.g_mobiledata, Colors.red),
+                        //     const SizedBox(width: 16),
+                        //     _buildSocialButton(Icons.apple, Colors.black),
+                        //     const SizedBox(width: 16),
+                        //     _buildSocialButton(Icons.facebook, Colors.blue),
+                        //   ],
+                        // ),
+                        const SizedBox(height: 15),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -475,19 +487,19 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
     );
   }
 
-  Widget _buildSocialButton(IconData icon, Color color) {
-    return Container(
-      height: 56,
-      width: 56,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: IconButton(
-        icon: Icon(icon, color: color, size: 28),
-        onPressed: () {},
-      ),
-    );
-  }
+  // Widget _buildSocialButton(IconData icon, Color color) {
+  //   return Container(
+  //     height: 56,
+  //     width: 56,
+  //     decoration: BoxDecoration(
+  //       color: Colors.white,
+  //       borderRadius: BorderRadius.circular(12),
+  //       border: Border.all(color: Colors.grey.shade200),
+  //     ),
+  //     child: IconButton(
+  //       icon: Icon(icon, color: color, size: 28),
+  //       onPressed: () {},
+  //     ),
+  //   );
+  // }
 }

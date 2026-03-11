@@ -10,94 +10,114 @@ class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
   void _showLogoutDialog(BuildContext context) {
+    bool isLoading = false;
+
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
-            children: [
-              Icon(Icons.logout, color: Colors.red, size: 28),
-              SizedBox(width: 12),
-              Text('Logout', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          content: const Text(
-            'Are you sure you want to logout?',
-            style: TextStyle(fontSize: 16),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              title: const Row(
+                children: [
+                  Icon(Icons.logout, color: Colors.red, size: 28),
+                  SizedBox(width: 12),
+                  Text(
+                    'Logout',
+                    style: TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                // Close dialog first
-                Navigator.of(dialogContext).pop();
-
-                // Perform logout
-                final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                await authProvider.logout();
-
-                // Show success message
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Row(
-                        children: [
-                          Icon(Icons.check_circle, color: Colors.white),
-                          SizedBox(width: 12),
-                          Text('Logged out successfully'),
-                        ],
-                      ),
-                      backgroundColor: Colors.green,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      duration: const Duration(seconds: 2),
+              content: const Text(
+                'Are you sure you want to logout?',
+                style: TextStyle(fontSize: 16),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
-                  );
-
-                  // Navigate to login screen
-                  await Future.delayed(const Duration(milliseconds: 500));
-
-                  if (context.mounted) {
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (context) => const LogInScreen()),
-                          (route) => false, // Remove all previous routes
-                    );
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-              ),
-              child: const Text(
-                'Logout',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                    setState(() {
+                      isLoading = true;
+                    });
+
+                    final authProvider =
+                    Provider.of<AuthProvider>(context,
+                        listen: false);
+
+                    await authProvider.logout();
+
+                    if (context.mounted) {
+                      Navigator.of(dialogContext).pop();
+
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              'Logged out successfully'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+
+                      Navigator.of(context)
+                          .pushAndRemoveUntil(
+                        MaterialPageRoute(
+                            builder: (context) =>
+                            const LogInScreen()),
+                            (route) => false,
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child:
+                    CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                      : const Text(
+                    'Logout',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
