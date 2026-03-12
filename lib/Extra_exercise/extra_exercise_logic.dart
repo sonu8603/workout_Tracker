@@ -11,12 +11,14 @@ class SetRow extends StatefulWidget {
   final int exerciseIndex;
   final int setIndex;
   final DateTime date;
+  final bool iseditable;
 
   const SetRow({
     required this.set,
     required this.exerciseIndex,
     required this.setIndex,
     required this.date,
+    this.iseditable=false,
   });
 
   @override
@@ -53,6 +55,7 @@ class _SetRowState extends State<SetRow> {
   }
 
   void _incrementWeight() {
+    if (widget.iseditable) return;
     double currentWeight = double.tryParse(weightController.text) ?? 0;
     currentWeight += 0.5; // Increment by 0.5 kg
     weightController.text = currentWeight.toString();
@@ -60,6 +63,7 @@ class _SetRowState extends State<SetRow> {
   }
 
   void _decrementWeight() {
+    if (widget.iseditable) return;
     double currentWeight = double.tryParse(weightController.text) ?? 0;
     if (currentWeight >= 0.5) {
       currentWeight -= 0.5;
@@ -69,6 +73,7 @@ class _SetRowState extends State<SetRow> {
   }
 
   void _incrementReps() {
+    if (widget.iseditable) return;
     int currentReps = int.tryParse(repsController.text) ?? 0;
     currentReps++;
     repsController.text = currentReps.toString();
@@ -76,6 +81,7 @@ class _SetRowState extends State<SetRow> {
   }
 
   void _decrementReps() {
+    if (widget.iseditable) return;
     int currentReps = int.tryParse(repsController.text) ?? 0;
     if (currentReps > 0) {
       currentReps--;
@@ -106,6 +112,100 @@ class _SetRowState extends State<SetRow> {
   Widget build(BuildContext context) {
     // ✅ Use the improved completion check
     bool isCompleted = _isSetCompleted();
+
+    if (widget.iseditable) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          children: [
+            // Set Number
+            SizedBox(
+              width: 60,
+              child: CircleAvatar(
+                backgroundColor: isCompleted ? Colors.green : Colors.grey[300],
+                child: Text(
+                  "${widget.set.setNumber}",
+                  style: TextStyle(
+                    color: isCompleted ? Colors.white : Colors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+
+            // Weight (read-only)
+            Expanded(
+              child: Column(
+                children: [
+                  Text(
+                    widget.set.weight.isEmpty ? "-" : widget.set.weight,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: widget.set.weight.isEmpty
+                          ? FontWeight.normal
+                          : FontWeight.bold,
+                      color: widget.set.weight.isEmpty
+                          ? Colors.grey
+                          : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    "kg",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 16),
+
+            // Reps (read-only)
+            Expanded(
+              child: Column(
+                children: [
+                  Text(
+                    widget.set.reps.isEmpty ? "-" : widget.set.reps,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: widget.set.reps.isEmpty
+                          ? FontWeight.normal
+                          : FontWeight.bold,
+                      color: widget.set.reps.isEmpty
+                          ? Colors.grey
+                          : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    "reps",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Check Icon
+            SizedBox(
+              width: 20,
+              child: isCompleted
+                  ? const Icon(Icons.check_circle, color: Colors.green, size: 28)
+                  : const Icon(Icons.circle_outlined, color: Colors.grey, size: 28),
+            ),
+          ],
+        ),
+      );
+    }
 
     return GestureDetector(
       behavior: HitTestBehavior.translucent,

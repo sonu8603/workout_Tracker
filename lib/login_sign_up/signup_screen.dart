@@ -292,7 +292,7 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
                         const SizedBox(height: 10),
                         _buildPasswordField(),
                         const SizedBox(height: 32),
-                        _buildModernButton(isLoading), // 🔥 Pass isLoading
+                        _buildModernButton(isLoading),
                         const SizedBox(height: 20),
                         Row(
                           children: [
@@ -475,7 +475,7 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
           shadowColor: Colors.transparent,
         ),
         child: isLoading
-            ? const CircularProgressIndicator(color: Color(0xFF673AB7))
+            ? const CircularProgressIndicator(color: Colors.white)
             : const Text(
           "Create Account",
           style: TextStyle(

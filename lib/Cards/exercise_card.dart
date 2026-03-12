@@ -202,6 +202,7 @@ class _ExerciseCardState extends State<ExerciseCard> {
                     builder: (context) => RegularExerciseScreen(
                       dayName: widget.keyId,
                       exerciseIndex: widget.exerciseIndex,
+                      iseditable: false,
                     ),
                   ),
                 );

@@ -302,12 +302,26 @@ class _SidePanelContent extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Need help with the app?"),
+            Text(
+              "Need help or want to report a bug?",
+              style: TextStyle(fontSize: 16),
+            ),
             SizedBox(height: 16),
-            Text("📧 Email: fitmetrics.team@gmail.com"),
+
+            Row(
+              children: [
+                Icon(Icons.email, size: 18),
+                SizedBox(width: 6),
+                Text("fitmetrics.team@gmail.com"),
+              ],
+            ),
 
             SizedBox(height: 8),
-            Text("📱 Version: 1.0.0"),
+
+            Text(
+              "App Version: 1.0.1",
+              style: TextStyle(color: Colors.grey),
+            ),
           ],
         ),
         actions: [

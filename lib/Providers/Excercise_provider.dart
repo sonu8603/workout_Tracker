@@ -1059,6 +1059,7 @@ class ExerciseProvider with ChangeNotifier {
 
         //  Skip if no completed sets or already saved
         if (completedSets.isEmpty || alreadySavedIds.contains(ex.id)) continue;
+        //if (completedSets.isEmpty ) continue;
 
         completedExercises.add(
           CompletedExercise(

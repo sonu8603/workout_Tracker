@@ -27,34 +27,7 @@ class WelcomeScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-
-              // Skip Button
-              Align(
-                alignment: Alignment.topRight,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const LogInScreen()));
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.only(top: 10, right: 15),
-                    child: Text(
-                      "SKIP",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
               const SizedBox(height: 20),
-
-              // MAIN IMAGE
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: Image.asset(

@@ -8,11 +8,13 @@ import '../models/individual_exercise_model.dart';
 class RegularExerciseScreen extends StatelessWidget {
   final String dayName;
   final int? exerciseIndex;
+  final bool iseditable;
 
   const RegularExerciseScreen({
     super.key,
     required this.dayName,
-    this.exerciseIndex,
+     this.exerciseIndex,
+     this.iseditable=false,
   });
 
   @override
@@ -44,7 +46,7 @@ class RegularExerciseScreen extends StatelessWidget {
         ),
         actions: [
           // Finish Workout Button
-          if (exerciseIndex == null && hasCompletedSets)
+          if (exerciseIndex == null && hasCompletedSets && iseditable)
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: TextButton.icon(
@@ -90,11 +92,12 @@ class RegularExerciseScreen extends StatelessWidget {
             exercise: exercisesToShow[index],
             exerciseIndex: actualIndex,
             dayName: dayName,
+            iseditable: iseditable,
             onDelete: () => _deleteExercise(context, actualIndex),
           );
         },
       ),
-      floatingActionButton: exerciseIndex == null
+      floatingActionButton: exerciseIndex == null && !iseditable
           ? FloatingActionButton(
         onPressed: () => _showAddExerciseDialog(context),
         backgroundColor: Colors.deepPurple,
@@ -350,6 +353,7 @@ class ExpandableRegularExerciseCard extends StatefulWidget {
   final int exerciseIndex;
   final String dayName;
   final VoidCallback onDelete;
+  final bool iseditable;
 
   const ExpandableRegularExerciseCard({
     super.key,
@@ -357,6 +361,7 @@ class ExpandableRegularExerciseCard extends StatefulWidget {
     required this.exerciseIndex,
     required this.dayName,
     required this.onDelete,
+     this.iseditable=false,
   });
 
   @override
@@ -368,12 +373,14 @@ class _AlwaysExpandedRegularExerciseCardState
     extends State<ExpandableRegularExerciseCard> {
 
   void _addSet(BuildContext context) {
+    if (widget.iseditable) return;
     final exerciseProvider =
     Provider.of<ExerciseProvider>(context, listen: false);
     exerciseProvider.addSetToDayExercise(widget.dayName, widget.exerciseIndex);
   }
 
   void _removeSet(BuildContext context) {
+    if (widget.iseditable) return;
     if (widget.exercise.sets.length <= 1) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Exercise must have at least 1 set")),
@@ -466,6 +473,7 @@ class _AlwaysExpandedRegularExerciseCardState
           const Divider(height: 1),
 
           // ========== ACTION BUTTONS ==========
+          if (!widget.iseditable)
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -589,6 +597,7 @@ class _AlwaysExpandedRegularExerciseCardState
                         exerciseIndex: widget.exerciseIndex,
                         setIndex: entry.key,
                         dayName: widget.dayName,
+                        iseditable: widget.iseditable,
                       );
                     }).toList(),
                   ),

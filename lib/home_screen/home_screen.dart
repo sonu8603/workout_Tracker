@@ -126,6 +126,7 @@ class HomeScreen extends StatelessWidget {
                             RegularExerciseScreen(
                               dayName: todayName,
                               exerciseIndex: null,
+                              iseditable: true,
                             ),
                       ),
                     );
@@ -162,6 +163,7 @@ class HomeScreen extends StatelessWidget {
                         builder: (context) => ExtraExerciseScreen(
                           date: todayDate,
                           exerciseIndex: null,
+                          iseditable: true,
                         ),
                       ),
                     );

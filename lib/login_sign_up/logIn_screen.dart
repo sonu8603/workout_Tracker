@@ -105,7 +105,7 @@ class _LogInScreenState extends State<LogInScreen>
         MaterialPageRoute(builder: (context) => const NavigationRoutePage()),
       );
     } else {
-      // Error handling - don't show snackbar for locked accounts (already shown in UI)
+
       if (!authProvider.isLocked && authProvider.error != null) {
         _showError(authProvider.error!);
       }

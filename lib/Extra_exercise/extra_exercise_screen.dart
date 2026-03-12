@@ -8,11 +8,13 @@ import 'extra_exercise_logic.dart';
 class ExtraExerciseScreen extends StatelessWidget {
   final DateTime date;
   final int? exerciseIndex;
+  final bool iseditable;
 
   const ExtraExerciseScreen({
     super.key,
     required this.date,
     this.exerciseIndex,
+    this.iseditable=false,
   });
 
   @override
@@ -44,7 +46,7 @@ class ExtraExerciseScreen extends StatelessWidget {
         ),
         backgroundColor: Colors.orange,
         actions: [
-          if (exerciseIndex == null && hasCompletedSets)
+          if (exerciseIndex == null && hasCompletedSets && iseditable)
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: TextButton.icon(
@@ -90,11 +92,12 @@ class ExtraExerciseScreen extends StatelessWidget {
             exercise: exercisesToShow[index],
             exerciseIndex: actualIndex,
             date: date,
+            iseditable: iseditable,
             onDelete: () => _deleteExercise(context, actualIndex),
           );
         },
       ),
-      floatingActionButton: exerciseIndex == null
+      floatingActionButton: exerciseIndex == null && !iseditable
           ? FloatingActionButton(
         onPressed: () => _showAddExerciseDialog(context),
         backgroundColor: Colors.orange,
@@ -198,7 +201,7 @@ class ExtraExerciseScreen extends StatelessWidget {
     if (confirmed != true) return;
 
     final success = await provider.saveWorkoutLog(
-      date: DateTime.now(),
+      date: date,
       dayName: "Extra Workout",
       exercises: allExercises,
     );
@@ -353,6 +356,7 @@ class ExpandableExtraExerciseCard extends StatefulWidget {
   final int exerciseIndex;
   final DateTime date;
   final VoidCallback onDelete;
+  final bool iseditable;
 
   const ExpandableExtraExerciseCard({
     super.key,
@@ -360,6 +364,7 @@ class ExpandableExtraExerciseCard extends StatefulWidget {
     required this.exerciseIndex,
     required this.date,
     required this.onDelete,
+    this.iseditable=false,
   });
 
   @override
@@ -369,13 +374,17 @@ class ExpandableExtraExerciseCard extends StatefulWidget {
 
 class _AlwaysExpandedExtraExerciseCardState
     extends State<ExpandableExtraExerciseCard> {
+
+
   void _addSet(BuildContext context) {
+    if (widget.iseditable) return;
     final exerciseProvider =
     Provider.of<ExerciseProvider>(context, listen: false);
     exerciseProvider.addSetToExercise(widget.date, widget.exerciseIndex);
   }
 
   void _removeSet(BuildContext context) {
+    if (widget.iseditable) return;
     if (widget.exercise.sets.length <= 1) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Exercise must have at least 1 set")),
@@ -468,6 +477,7 @@ class _AlwaysExpandedExtraExerciseCardState
           const Divider(height: 1),
 
           // Buttons
+          if (!widget.iseditable)
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -591,6 +601,7 @@ class _AlwaysExpandedExtraExerciseCardState
                         exerciseIndex: widget.exerciseIndex,
                         setIndex: entry.key,
                         date: widget.date,
+                        iseditable: widget.iseditable,
                       );
                     }).toList(),
                   ),
