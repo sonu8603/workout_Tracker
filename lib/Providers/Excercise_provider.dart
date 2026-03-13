@@ -27,17 +27,20 @@ class ExerciseProvider with ChangeNotifier {
   bool _isInitialized = false;
 
   String? _lastError;
-  String? _currentUserId; // 🔥 NEW: Track current user
+  String? _currentUserId;
 
-  // Getters
+// Getters
   List<WorkoutDay> get days => _days;
   int get selectedIndex => _selectedIndex;
   bool get isInitialized => _isInitialized;
   String? get lastError => _lastError;
 
-  // 🔥 CHANGED: Constructor does NOT auto-initialize
+// 🔥 Setter for lastError
+  set lastError(String? error) => _lastError = error;
+
+// Constructor
   ExerciseProvider() {
-    // Wait for initializeForUser() call from login/signup
+    // Wait for initializeForUser() call
   }
 
   // ================= INITIALIZATION =================
@@ -1015,88 +1018,190 @@ class ExerciseProvider with ChangeNotifier {
   }
 
   // ================= WORKOUT LOGGING METHODS =================
-
   Future<bool> saveWorkoutLog({
     required DateTime date,
     required String dayName,
     required List<Exercise> exercises,
-    String? notes,
   }) async {
     try {
-      if (_workoutLogsBox == null) {
-        _lastError = 'Workout log box not initialized';
+      if (logsBox == null) return false;
+
+      // Filter only completed exercises
+      final completedExercises = exercises
+          .where((ex) => ex.sets.any((s) =>
+      s.weight.isNotEmpty && s.reps.isNotEmpty))
+          .map((ex) => CompletedExercise(
+        exerciseId: ex.id,
+        name: ex.name,
+        sets: ex.sets,
+        completedAt: DateTime.now(),
+      ))
+          .toList();
+
+      if (completedExercises.isEmpty) {
+        lastError = 'No completed sets to save';
         return false;
       }
 
+      // 🔥 NEW: Check if log already exists for this date and dayName
+      final existingLogKey = _findExistingLog(date, dayName);
 
-      final todayKey = _dateToString(date);
+      if (existingLogKey != null) {
+        final existingLog = logsBox!.get(existingLogKey);
 
-      //  Get existing logs of today
-      final existingLogs = _workoutLogsBox!.values // 🔥 CHANGED: Added !
-          .where((log) => _dateToString(log.date) == todayKey)
-          .toList();
+        if (existingLog != null) {
+          existingLog.exercises = completedExercises;
+          existingLog.completedAt = DateTime.now();
 
-      //  Collect already saved exercise IDs
-      final alreadySavedIds = <String>{};
-      for (var log in existingLogs) {
-        for (var ex in log.exercises) {
-          alreadySavedIds.add(ex.exerciseId);
+          await logsBox!.put(existingLogKey, existingLog);
+
+          notifyListeners();
+          return true;
         }
       }
 
-      final completedExercises = <CompletedExercise>[];
-
-      for (var ex in exercises) {
-        //  DEEP COPY of completed sets
-        final completedSets = ex.sets
-            .where((s) => _isSetCompleted(s))
-            .map((s) => ExerciseSet(
-          setNumber: s.setNumber,
-          weight: s.weight,
-          reps: s.reps,
-        ))
-            .toList();
-
-        //  Skip if no completed sets or already saved
-        if (completedSets.isEmpty || alreadySavedIds.contains(ex.id)) continue;
-        //if (completedSets.isEmpty ) continue;
-
-        completedExercises.add(
-          CompletedExercise(
-            exerciseId: ex.id,
-            name: ex.name,
-            sets: completedSets,
-            completedAt: DateTime.now(),
-          ),
-        );
-      }
-
-      if (completedExercises.isEmpty) {
-        _lastError = 'No new completed exercises to save';
-        return false;
-      }
-
-      final now = DateTime.now();
-      final key =
-          '${todayKey}_${now.hour}${now.minute}${now.second}${now.millisecond}';
-
+      // 🔥 CREATE new log if doesn't exist
       final log = WorkoutLog(
         date: DateTime(date.year, date.month, date.day),
         dayName: dayName,
         exercises: completedExercises,
-        startedAt: now,
-        completedAt: now,
-        notes: notes,
+        startedAt: DateTime.now(),
+        completedAt: DateTime.now(),
       );
 
-      await _workoutLogsBox!.put(key, log); // 🔥 CHANGED: Added !
+      await logsBox!.add(log);
       notifyListeners();
       return true;
     } catch (e) {
-      _lastError = 'Error saving workout log: $e';
+      lastError = 'Failed to save workout: $e';
+      debugPrint(' Save workout error: $e');
       return false;
     }
   }
+
+// 🔥 NEW: Helper method to find existing log
+
+  dynamic _findExistingLog(DateTime date, String dayName) {
+    if (logsBox == null) return null;
+
+    final targetDate = DateTime(date.year, date.month, date.day);
+
+    for (var key in logsBox!.keys) {
+      final log = logsBox!.get(key);
+
+      if (log != null) {
+        final logDate = DateTime(
+          log.date.year,
+          log.date.month,
+          log.date.day,
+        );
+
+        if (logDate == targetDate && log.dayName == dayName) {
+          return key; // 🔥 return original key type
+        }
+      }
+    }
+
+    return null;
+  }
+
+
+  // corect code here
+  // Future<bool> saveWorkoutLog({
+  //   required DateTime date,
+  //   required String dayName,
+  //   required List<Exercise> exercises,
+  //   String? notes,
+  // }) async {
+  //   try {
+  //     if (_workoutLogsBox == null) {
+  //       _lastError = 'Workout log box not initialized';
+  //       return false;
+  //     }
+  //
+  //     final todayKey = _dateToString(date);
+  //
+  //     // 🔎 Find today's existing log
+  //     MapEntry<dynamic, WorkoutLog>? existingEntry;
+  //
+  //     for (var entry in _workoutLogsBox!.toMap().entries) {
+  //       if (_dateToString(entry.value.date) == todayKey) {
+  //         existingEntry = entry;
+  //         break;
+  //       }
+  //     }
+  //
+  //     WorkoutLog? existingLog = existingEntry?.value;
+  //     dynamic existingKey = existingEntry?.key;
+  //
+  //     final completedExercises = <CompletedExercise>[];
+  //
+  //     for (var ex in exercises) {
+  //       final completedSets = ex.sets
+  //           .where((s) => _isSetCompleted(s))
+  //           .map((s) => ExerciseSet(
+  //         setNumber: s.setNumber,
+  //         weight: s.weight,
+  //         reps: s.reps,
+  //       ))
+  //           .toList();
+  //
+  //       if (completedSets.isEmpty) continue;
+  //
+  //       completedExercises.add(
+  //         CompletedExercise(
+  //           exerciseId: ex.id,
+  //           name: ex.name,
+  //           sets: completedSets,
+  //           completedAt: DateTime.now(),
+  //         ),
+  //       );
+  //     }
+  //
+  //     if (completedExercises.isEmpty) {
+  //       _lastError = 'No completed exercises to save';
+  //       return false;
+  //     }
+  //
+  //     final now = DateTime.now();
+  //
+  //     if (existingLog != null && existingKey != null) {
+  //       // 🔥 UPDATE EXISTING LOG
+  //
+  //       for (var ex in completedExercises) {
+  //         existingLog.exercises.removeWhere(
+  //               (e) => e.name.toLowerCase() == ex.name.toLowerCase(),
+  //         );
+  //       }
+  //
+  //       existingLog.exercises.addAll(completedExercises);
+  //       existingLog.completedAt = now;
+  //
+  //       await _workoutLogsBox!.put(existingKey, existingLog);
+  //     } else {
+  //       // 🔥 CREATE NEW LOG
+  //
+  //       final key = DateTime.now().millisecondsSinceEpoch.toString();
+  //
+  //       final log = WorkoutLog(
+  //         date: DateTime(date.year, date.month, date.day),
+  //         dayName: dayName,
+  //         exercises: completedExercises,
+  //         startedAt: now,
+  //         completedAt: now,
+  //         notes: notes,
+  //       );
+  //
+  //       await _workoutLogsBox!.put(key, log);
+  //     }
+  //
+  //     notifyListeners();
+  //     return true;
+  //   } catch (e) {
+  //     _lastError = 'Error saving workout log: $e';
+  //     return false;
+  //   }
+  // }
 
 
 

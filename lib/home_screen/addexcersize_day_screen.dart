@@ -26,10 +26,13 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
   }
 
   void _addExercise() {
-    final exerciseName = _exerciseController.text.trim();
+    // 1. Text ko trim karein aur capitalization handle karein
+    // Agar aap hamesha "Bench Press" format chahte hain toh textCapitalization kaam karega
+    // Lekin backend/logic ke liye hum ise normalize karenge.
+    final rawName = _exerciseController.text.trim();
     const sets = 3;
 
-    if (exerciseName.isEmpty) {
+    if (rawName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please enter exercise name")),
       );
@@ -37,32 +40,46 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
     }
 
     final provider = Provider.of<ExerciseProvider>(context, listen: false);
+    final dayExercises = provider.getExercisesForDay(widget.day);
 
+    // 2. Duplicate Check (Case-insensitive)
+    // Hum replaceAll(' ', '') isliye use kar rahe hain taaki "BenchPress" aur "Bench Press" bhi duplicate mani jayein
+    final isDuplicate = dayExercises.any((exercise) =>
+    exercise.name.toLowerCase().replaceAll(' ', '') ==
+        rawName.toLowerCase().replaceAll(' ', ''));
 
-    final DateTime dateToUse;
-    if (widget.isRoutineSetup) {
-      dateToUse = DateTime(2000, 1, 1); // Template date - won't show in history
-    } else {
-      dateToUse = DateTime.now(); // Actual workout date
+    if (isDuplicate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("'$rawName' is already added for ${widget.day}!"),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
     }
+
+    // 3. Exercise Name formatting (Store as "Bench Press" instead of "bench press")
+    // User ko achha dikhane ke liye title case use karna better hai
+    String formattedName = rawName[0].toUpperCase() + rawName.substring(1).toLowerCase();
+
+    final DateTime dateToUse = widget.isRoutineSetup ? DateTime(2000, 1, 1) : DateTime.now();
 
     provider.addExerciseToDay(
       widget.day,
-      exerciseName,
+      formattedName, // formatted name bhej rahe hain
       sets,
       dateToUse,
     );
 
-    // Clear input
     _exerciseController.clear();
 
-    // Success message
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           widget.isRoutineSetup
-              ? "Added to ${widget.day} routine"
-              : "Exercise logged for ${widget.day}",
+              ? "Added $formattedName to ${widget.day} routine"
+              : "$formattedName logged for ${widget.day}",
         ),
         backgroundColor: widget.isRoutineSetup ? Colors.blue : Colors.deepPurple,
       ),
@@ -75,7 +92,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
 
     showDialog(
       context: parentContext,
-      barrierDismissible: false,  // 🔥 Prevent accidental dismissal
+      barrierDismissible: false,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text("Edit Exercise Name"),
@@ -100,32 +117,50 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
               onPressed: () async {
                 final newName = editController.text.trim();
 
-                // 🔥 STEP 1: Close dialog IMMEDIATELY
+
+                if (newName.isEmpty) {
+                  ScaffoldMessenger.of(parentContext).showSnackBar(
+                    const SnackBar(content: Text("Name cannot be empty")),
+                  );
+                  return;
+                }
+                if (newName.toLowerCase() != currentName.toLowerCase()) {
+                  final dayExercises = provider.getExercisesForDay(widget.day);
+
+                  final alreadyExists = dayExercises.any((exercise) =>
+                  exercise.name.toLowerCase().replaceAll(' ', '') ==
+                      newName.toLowerCase().replaceAll(' ', ''));
+
+                  if (alreadyExists) {
+                    ScaffoldMessenger.of(parentContext).showSnackBar(
+                      SnackBar(
+                        content: Text("Exercise '$newName' already exists in this day!"),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                    return;
+                  }
+                }
+
+
                 Navigator.of(dialogContext).pop();
-
-                // 🔥 STEP 2: Wait a tiny bit for dialog to close
                 await Future.delayed(const Duration(milliseconds: 100));
+                if (newName != currentName) {
+                  // Formatting: First letter capital
+                  String formattedName = newName[0].toUpperCase() + newName.substring(1).toLowerCase();
 
-                // 🔥 STEP 3: NOW update (which triggers notifyListeners)
-                if (newName.isNotEmpty && newName != currentName) {
-                  provider.updateExerciseName(widget.day, index, newName);
-
+                  provider.updateExerciseName(widget.day, index, formattedName);
 
                   if (parentContext.mounted) {
                     ScaffoldMessenger.of(parentContext).showSnackBar(
                       SnackBar(
-                        content: Text(
-                          "Updated to: $newName",
-                          style: const TextStyle(color: Colors.white),
-                        ),
+                        content: Text("Updated to: $formattedName"),
                         backgroundColor: Colors.green,
-                        duration: const Duration(seconds: 2),
                       ),
                     );
                   }
                 }
 
-                // 🔥 STEP 5: Dispose controller
                 editController.dispose();
               },
               style: ElevatedButton.styleFrom(

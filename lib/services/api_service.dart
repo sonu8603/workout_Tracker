@@ -73,7 +73,7 @@ class ApiService {
     required String username,
     required String email,
     required String password,
-    required String phone,
+   // required String phone,
   }) async {
     try {
       if (kDebugMode) debugPrint('🔵 Registering: $username, $email');
@@ -85,7 +85,7 @@ class ApiService {
           'username': username,
           'email': email,
           'password': password,
-          'phone': phone,
+          //'phone': phone,
         }),
       ).timeout(const Duration(seconds: 15));
 

@@ -372,7 +372,6 @@ class AuthProvider extends ChangeNotifier {
     required String username,
     required String email,
     required String password,
-    required String phone,
   }) async {
     if (kDebugMode) {
       debugPrint('🔷 REGISTER called');
@@ -388,7 +387,7 @@ class AuthProvider extends ChangeNotifier {
         username: username,
         email: email,
         password: password,
-        phone: phone,
+
       );
 
       if (kDebugMode) {

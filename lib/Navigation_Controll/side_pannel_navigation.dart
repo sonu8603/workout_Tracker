@@ -319,7 +319,7 @@ class _SidePanelContent extends StatelessWidget {
             SizedBox(height: 8),
 
             Text(
-              "App Version: 1.0.1",
+              "App Version: 1.0.0",
               style: TextStyle(color: Colors.grey),
             ),
           ],

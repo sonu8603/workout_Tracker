@@ -30,7 +30,8 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Workout at $todayName"),
+        title: Text("workout on $todayName"),
+        centerTitle: true,
         backgroundColor: Colors.deepPurple[500],
         leading: IconButton(
           icon: const Icon(Icons.menu),

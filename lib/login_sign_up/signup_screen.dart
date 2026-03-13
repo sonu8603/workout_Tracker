@@ -22,7 +22,6 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
 
   late AnimationController _animationController;
@@ -46,7 +45,7 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
     _animationController.dispose();
     _nameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
+
     _passwordController.dispose();
     super.dispose();
   }
@@ -71,7 +70,7 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
       username: _nameController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
-      phone: _phoneController.text.trim(),
+
     );
 
     if (kDebugMode) {
@@ -132,7 +131,7 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
     } else {
       // 🔥 Show error from AuthProvider
       if (kDebugMode) {
-        debugPrint('❌ Registration failed: ${authProvider.error}');
+        debugPrint(' Registration failed: ${authProvider.error}');
       }
 
       _showError(authProvider.error ?? 'Registration failed');
@@ -272,24 +271,24 @@ class _ModernSignUpScreenState extends State<SignUpScreen>
                           },
                         ),
                         const SizedBox(height: 10),
-                        _buildModernTextField(
-                          controller: _phoneController,
-                          label: "Phone Number",
-                          hint: "Enter 10-digit number",
-                          icon: Icons.phone_outlined,
-                          keyboardType: TextInputType.phone,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return "Please enter your phone number";
-                            }
-                            final phoneRegex = RegExp(r'^[0-9]{10}$');
-                            if (!phoneRegex.hasMatch(value)) {
-                              return "Enter a valid 10-digit phone number";
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 10),
+                        // _buildModernTextField(
+                        //   controller: _phoneController,
+                        //   label: "Phone Number",
+                        //   hint: "Enter 10-digit number",
+                        //   icon: Icons.phone_outlined,
+                        //   keyboardType: TextInputType.phone,
+                        //   validator: (value) {
+                        //     if (value == null || value.isEmpty) {
+                        //       return "Please enter your phone number";
+                        //     }
+                        //     final phoneRegex = RegExp(r'^[0-9]{10}$');
+                        //     if (!phoneRegex.hasMatch(value)) {
+                        //       return "Enter a valid 10-digit phone number";
+                        //     }
+                        //     return null;
+                        //   },
+                        // ),
+                        // const SizedBox(height: 10),
                         _buildPasswordField(),
                         const SizedBox(height: 32),
                         _buildModernButton(isLoading),
