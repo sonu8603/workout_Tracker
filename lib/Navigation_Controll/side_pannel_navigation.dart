@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:workout_tracker/Graph_screen/graph_screen.dart';
+import 'package:workout_tracker/exercises/body_parts_screen.dart';
 import 'package:workout_tracker/home_screen/set_up_routein_days.dart';
 import '../Providers/Excercise_provider.dart';
 import '../Providers/auth_provider.dart';
-import '../home_screen/addexcersize_day_screen.dart';
 import '../setting_editing/settingpage.dart';
 
 void showLeftPanel(BuildContext context) {
@@ -84,7 +84,7 @@ class _SidePanelContent extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => AddExerciseScreen(day: todayName),
+                            builder: (context) => const BodyPartScreen(),
                           ),
                         );
                       },

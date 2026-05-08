@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:workout_tracker/Providers/Excercise_provider.dart';
+import 'package:workout_tracker/exercises/body_parts_screen.dart';
 import 'package:workout_tracker/regular_exercises/regular_exercise_screen.dart';
 import '../Cards/exercise_card.dart';
 import '../Cards/exercise_dialog_pop_up.dart';
@@ -82,7 +83,7 @@ class HomeScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
-                        AddExerciseScreen(day: todayName),
+                        BodyPartScreen(),
                   ),
                 );
               },

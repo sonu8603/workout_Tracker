@@ -9,5 +9,5 @@ class ApiConfig {
 
   static String get baseUrl => isProd
       ? "https://fitmetrics-3m07.onrender.com/api"
-      : "http://10.0.2.2:5000/api";
+      : "http://10.103.123.139:5000/api";
 }

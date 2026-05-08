@@ -317,7 +317,7 @@ class AuthProvider extends ChangeNotifier {
         _remainingSeconds = result['remainingSeconds'] ?? 0;
 
         if (result['lockUntil'] != null) {
-          _lockUntil = DateTime.fromMillisecondsSinceEpoch(result['lockUntil']);
+          _lockUntil = DateTime.parse(result['lockUntil']);
           await _saveLockToStorage();
           _startLockTimer();
           if (kDebugMode) {

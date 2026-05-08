@@ -344,6 +344,7 @@ class _LogInScreenState extends State<LogInScreen>
                             builder: (context) => const ForgotPasswordScreen(),
                           ),
                         );
+
                       },
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
@@ -399,7 +400,7 @@ class _LogInScreenState extends State<LogInScreen>
                       Text(
                         "Don't have an account? ",
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 16,
                           color: Colors.grey.shade700,
                         ),
                       ),
@@ -418,7 +419,7 @@ class _LogInScreenState extends State<LogInScreen>
                         child: const Text(
                           "Sign Up",
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF7165D6),
                           ),

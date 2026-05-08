@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:hive/hive.dart';
 import 'package:flutter/foundation.dart';
+import 'package:workout_tracker/exercises/exercise_model/exercises_list_model.dart';
 
 import '../config/apiconfig.dart';
 import '../main.dart'; // 🔥 ADDED: For HiveConfig
@@ -136,69 +137,39 @@ class ApiService {
     required String password,
   }) async {
     try {
-      if (kDebugMode) debugPrint('🔵 Logging in: $identifier');
-
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/auth/login'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'identifier': identifier,
-          'password': password,
-        }),
+        body: json.encode({'identifier': identifier, 'password': password}),
       ).timeout(const Duration(seconds: 15));
-
-      if (kDebugMode) {
-        debugPrint('📥 Status: ${response.statusCode}');
-        debugPrint('📥 Response: ${response.body}');
-      }
-
-      await _checkAndRefreshToken(response);
 
       final data = json.decode(response.body);
 
+
       if (response.statusCode == 423 || response.statusCode == 429) {
-        if (data['lockUntil'] == null || data['remainingSeconds'] == null) {
-          return {
-            'success': false,
-            'code': 'ACCOUNT_LOCKED',
-            'message': data['message'] ?? 'Too many login attempts. Please try again later.',
-          };
-        }
-
-        final int lockUntil = data['lockUntil'];
-        final int remainingSeconds = data['remainingSeconds'];
-
-        if (kDebugMode) {
-          debugPrint('🔒 Using server lock info:');
-          debugPrint('   - Until: ${DateTime.fromMillisecondsSinceEpoch(lockUntil)}');
-          debugPrint('   - Remaining: $remainingSeconds sec');
-        }
-
         return {
           'success': false,
           'code': 'ACCOUNT_LOCKED',
-          'message': data['message'],
-          'lockUntil': lockUntil,
-          'remainingSeconds': remainingSeconds,
-          'remainingMinutes': data['remainingMinutes'] ?? (remainingSeconds / 60).ceil(),
+          'message': data['message'] ?? 'Too many attempts. Try again later.',
+          'lockUntil': data['lockUntil'],
+          'remainingSeconds': data['remainingSeconds'],
+          'remainingMinutes': data['remainingMinutes'] ??
+              ((data['remainingSeconds'] ?? 0) / 60).ceil(),
         };
       }
+
+
+      await _checkAndRefreshToken(response);
 
       if (response.statusCode == 200) {
         await saveToken(data['token']);
         await saveUserData(data['user']);
-        if (kDebugMode) debugPrint('✅ Login successful');
-
         return {
           'success': true,
           'message': data['message'],
           'token': data['token'],
           'user': data['user'],
         };
-      }
-
-      if (kDebugMode) {
-        debugPrint('❌ Login failed: ${data['message']}');
       }
 
       return {
@@ -209,26 +180,14 @@ class ApiService {
       };
 
     } on TimeoutException {
-      if (kDebugMode) debugPrint('⏱️ Request timeout');
-      return {
-        'success': false,
-        'message': 'Connection timeout. Please try again.',
-      };
+      return {'success': false, 'message': 'Connection timeout. Please try again.'};
     } on http.ClientException {
-      if (kDebugMode) debugPrint('🌐 Network error - no connection');
-      return {
-        'success': false,
-        'message': 'Cannot connect to server. Please check your internet connection.',
-      };
+      return {'success': false, 'message': 'Cannot connect to server. Check your internet connection.'};
     } catch (e) {
-      if (kDebugMode) debugPrint('🔴 Error: $e');
-      return {
-        'success': false,
-        'message': 'Network error. Please try again.',
-      };
+      if (kDebugMode) debugPrint('🔴 Error: $e'); // Check what's actually throwing
+      return {'success': false, 'message': 'Network error. Please try again.'};
     }
   }
-
   static Future<Map<String, dynamic>> forgotPassword({
     required String email,
   }) async {
@@ -645,4 +604,75 @@ class ApiService {
     await _authBox.clear();
     if (kDebugMode) debugPrint('🚪 Logged out');
   }
+
+
+
+  // fetching exercise from backend// ============== EXERCISE APIs ==============
+//
+   // Fetches exercises from backend using the internally stored token
+  static Future<List<ExerciseModel>> getExercisesByPart(
+      String bodyPartId,
+      ) async {
+    try {
+      final token = getToken();
+
+      if (token == null) {
+        throw Exception(
+          "Authentication token not found. Please log in.",
+        );
+      }
+
+      final response = await http
+          .get(
+        Uri.parse(
+          '${ApiConfig.baseUrl}/exercises/bodypart/$bodyPartId',
+        ),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      )
+          .timeout(const Duration(seconds: 15));
+
+      await _checkAndRefreshToken(response);
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = responseData['data'];
+
+        return data
+            .map((json) => ExerciseModel.fromJson(json))
+            .toList();
+      } else if (response.statusCode == 401) {
+        throw Exception(
+          "Session expired. Please log in again.",
+        );
+      } else if (response.statusCode == 404) {
+        return [];
+      } else {
+        throw Exception(
+          responseData['message'] ??
+              "Failed to fetch exercises",
+        );
+      }
+    } on TimeoutException {
+      throw Exception(
+        "Connection timed out. Check your server.",
+      );
+    } on http.ClientException {
+      throw Exception(
+        "Check your internet connection.",
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Exercise fetch error: $e');
+      }
+
+      throw Exception(
+        "An unexpected error occurred: $e",
+      );
+    }
+  }
+
 }

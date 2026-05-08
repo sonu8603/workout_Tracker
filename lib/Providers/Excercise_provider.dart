@@ -1248,7 +1248,7 @@ class ExerciseProvider with ChangeNotifier {
     return history;
   }
 
-  int get totalWorkoutLogs => _workoutLogsBox?.length ?? 0; // 🔥 CHANGED: Added null safety
+  int get totalWorkoutLogs => _workoutLogsBox?.length ?? 0; //  CHANGED: Added null safety
 
   int getWorkoutStreak() {
     final dates = getAllWorkoutLogDates();
