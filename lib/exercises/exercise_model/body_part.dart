@@ -25,3 +25,10 @@ final List<BodyPart> bodyParts = [
   BodyPart(id: "arms", name: "Arms",  image: "assets/images/body_part_image/chest.png",),
   BodyPart(id: "core", name: "Core",   image: "assets/images/body_part_image/chest.png",),
 ];
+
+final List<BodyPart> cardioParts = [
+  BodyPart(id: 'cardio',name: 'Running', image: 'assets/running.png', ),
+  BodyPart(id: 'cardio',name: 'Cycling', image: 'assets/cycling.png'),
+  BodyPart(id: 'cardio',name: 'Swimming', image: 'assets/swimming.png'),
+  BodyPart(id: 'cardio',name: 'Jump Rope', image: 'assets/jumprope.png'),
+];
