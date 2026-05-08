@@ -15,11 +15,15 @@ class ShowExercisesScreen extends StatefulWidget {
   State<ShowExercisesScreen> createState() => _ShowExercisesScreenState();
 }
 
-class _ShowExercisesScreenState extends State<ShowExercisesScreen> {
+class _ShowExercisesScreenState extends State<ShowExercisesScreen>
+    with AutomaticKeepAliveClientMixin {
   late Future<List<ExerciseModel>> _futureExercises;
   List<ExerciseModel> allExercises = [];
   List<ExerciseModel> filteredExercises = [];
   final TextEditingController _searchController = TextEditingController();
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -80,16 +84,19 @@ class _ShowExercisesScreenState extends State<ShowExercisesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
 
      const accentColor = Color(0xFF00A884); // Teal green accent
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
-      appBar: AppBar(
-        title: Text(widget.bodyPart, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+      appBar: widget.bodyPart == 'cardio'
+          ? null
+          : AppBar(
+        title: Text(widget.bodyPart[0].toUpperCase() + widget.bodyPart.substring(1)),
         backgroundColor: AppColors.scaffoldBg,
         elevation: 0,
-        centerTitle: false,
+        automaticallyImplyLeading: true,
       ),
       body: Column(
         children: [

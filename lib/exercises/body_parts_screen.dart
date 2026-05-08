@@ -44,11 +44,8 @@ class _BodyPartScreenState extends State<BodyPartScreen> with SingleTickerProvid
       body: TabBarView(
         controller: _tabController,
         children: [
-          // Tab 1: Strength Training (Your existing list)
           _buildBodyPartList(bodyParts, context, AppColors.textPrimary),
-
-          // Tab 2: Cardio (New list)
-          _buildBodyPartList(cardioParts, context, AppColors.textPrimary),
+          ShowExercisesScreen(bodyPart: 'cardio'),
         ],
       ),
     );
