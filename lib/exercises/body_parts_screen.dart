@@ -27,7 +27,9 @@ class _BodyPartScreenState extends State<BodyPartScreen> with SingleTickerProvid
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       appBar: AppBar(
-        title: const Text("Training Type"),
+        iconTheme: IconThemeData(color:Colors.black,size: 25),
+        title: const Text("Training Type",
+          style: TextStyle(fontSize:22,fontWeight: FontWeight.bold,color: Colors.black),),
         backgroundColor: AppColors.scaffoldBg,
         elevation: 0,
         bottom: TabBar(
@@ -76,20 +78,24 @@ class _BodyPartScreenState extends State<BodyPartScreen> with SingleTickerProvid
                 width: 55,
                 height: 55,
                 fit: BoxFit.cover,
+                color: Colors.black,
               ),
             ),
             title: Text(
               part.name,
               style: TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 16,
+                fontSize: 17,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            trailing: Icon(
-              Icons.arrow_forward_ios,
-              size: 14,
-              color: AppColors.textPrimary,
+            trailing: Padding(
+              padding: const EdgeInsets.all(5),
+              child: Icon(
+                Icons.arrow_forward_ios,
+                size: 15,
+                color: AppColors.textPrimary,
+              ),
             ),
             onTap: () {
               Navigator.push(

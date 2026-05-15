@@ -10,7 +10,7 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="false"
-        android:allowBackup="false"
+        android:allowBackup="true"
         android:supportsRtl="true">
         <activity
             android:name=".MainActivity"

@@ -7,7 +7,7 @@ import '../Cards/exercise_card.dart';
 import '../Cards/exercise_dialog_pop_up.dart';
 import '../Extra_exercise/extra_exercise_screen.dart';
 import '../Navigation_Controll/side_pannel_navigation.dart';
-import 'addexcersize_day_screen.dart';
+
 
 class HomeScreen extends StatelessWidget {
   final String? day;

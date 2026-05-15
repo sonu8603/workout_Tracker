@@ -19,11 +19,11 @@ final List<BodyPart> bodyParts = [
     name: "Chest",
     image: "assets/images/body_part_image/chest.png",
   ),
-  BodyPart(id: "back", name: "Back",  image: "assets/images/body_part_image/chest.png",),
-  BodyPart(id: "legs", name: "Legs",   image: "assets/images/body_part_image/chest.png",),
-  BodyPart(id: "shoulders", name: "Shoulders",   image: "assets/images/body_part_image/chest.png",),
-  BodyPart(id: "arms", name: "Arms",  image: "assets/images/body_part_image/chest.png",),
-  BodyPart(id: "core", name: "Core",   image: "assets/images/body_part_image/chest.png",),
+  BodyPart(id: "back", name: "Back",  image: "assets/images/body_part_image/back.png",),
+  BodyPart(id: "legs", name: "Legs",   image: "assets/images/body_part_image/leg.png",),
+  BodyPart(id: "shoulders", name: "Shoulders",   image: "assets/images/body_part_image/shoulder.png",),
+  BodyPart(id: "arms", name: "Arms",  image: "assets/images/body_part_image/arm.png",),
+  BodyPart(id: "core", name: "Core",   image: "assets/images/body_part_image/core.png",),
 ];
 
 final List<BodyPart> cardioParts = [

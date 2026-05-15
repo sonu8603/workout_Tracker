@@ -658,13 +658,24 @@ class ApiService {
       }
     } on TimeoutException {
       throw Exception(
-        "Connection timed out. Check your server.",
+        "Connection timed out. Check your connection.",
       );
-    } on http.ClientException {
+    } on http.ClientException catch (e) {
+
+      if (kDebugMode) {
+        debugPrint("Client Exception: $e");
+      }
+
+      if (e.message.contains('Connection refused')) {
+        throw Exception(
+          "Unable to connect. Please try again later.",
+        );
+      }
+
       throw Exception(
-        "Check your internet connection.",
+        "Network error. Please check your internet.",
       );
-    } catch (e) {
+    }catch (e) {
       if (kDebugMode) {
         debugPrint('Exercise fetch error: $e');
       }
