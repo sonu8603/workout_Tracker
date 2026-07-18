@@ -19,6 +19,7 @@ The app combines secure authentication, routine planning, exercise management, l
 * Secure API Communication
 * Backend Credential Storage
 * OTP Verification System
+* rate limiting feature after 5 failed attemped
 
 ---
 
